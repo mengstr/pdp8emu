@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include "realtime.h"
 #include "bus.h"
+#include "ttyaccess.h"
 
 /*********************************************************************/
 /* options:  The user may change the speed of the simulated teletype */

@@ -6,8 +6,9 @@
 
 */
 
-#include "bus.h"
 #include <stdio.h>
+#include "bus.h"
+#include "ttyaccess.h"
 
 /***********************************/
 /* instruction frequency histogram */

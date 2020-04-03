@@ -86,7 +86,7 @@ EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 # options from the above
 
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
-options = $(CPU) -std=c89 $(CONSOLE) $(INTERN) $(EXTERN)
+options = $(CPU) -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
 objects = $(cpu) $(console) $(intern) $(extern)
 libraries = $(conslib)
 

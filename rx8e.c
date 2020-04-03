@@ -13,10 +13,11 @@
    byte 256.  Simulated RX01 diskettes should be created using rx01format.
 */
 
+#include <stdio.h>
 #include "realtime.h"
 #include "bus.h"
-#include <stdio.h>
-
+#include "utility.h"
+#include "kc8m.h"
 
 /***********/
 /* formats */

@@ -14,6 +14,9 @@
 #include <strings.h>
 #include "realtime.h"
 #include "bus.h"
+#include "ttyaccess.h"
+#include "debug.h"
+#include "kk8e.h"
 
 #define control(ch) (ch & 037)
 

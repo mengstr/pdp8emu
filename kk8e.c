@@ -16,8 +16,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bus.h"
+#include "utility.h"
 #include "realtime.h"
-
+#include "ttyaccess.h"
+#include "debug.h"
+#include "pc8e.h"
+#include "rx8e.h"
+#include "cr8f.h"
+#include "kc8m.h"
+#include "dk8e.h"
+#include "kl8e.h"
+#include "km8e.h"
 
 /************************************************************/
 /* Declarations of machine components not included in bus.h */
@@ -158,7 +167,7 @@ void powerdown(void)
 {
 	ttyrestore();
 	if (corename[0] != '\0') { /* there is a core file */
-		dumpcore(corename);
+		dumpcore();
 	}
 	close_devices();
 	exit(0);
