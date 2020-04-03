@@ -48,13 +48,13 @@
 /**********/
 
 /* RX8E interface to RX01 controller delay, per data chunk */
-#define byte_time ((18 * microsecond) / IOFUDGE )
-#define word_time ((23 * microsecond) / IOFUDGE )
+#define byte_time (18 * microsecond)
+#define word_time (23 * microsecond)
 
 /* RX01 seek times */
-#define track_time ((10 * millisecond) / IOFUDGE )
-#define settle_time ((25 * millisecond) / IOFUDGE )
-#define rotate_time ((166 * millisecond) / IOFUDGE )
+#define track_time (10 * millisecond)
+#define settle_time (25 * millisecond)
+#define rotate_time (166 * millisecond)
 #define sector_time (rotate_time / sectors_per_track)
 
 

@@ -19,10 +19,10 @@
 /***********/
 
 /* The advertised speed of the punch is 50 chars/sec. */
-#define punch_time ((20 * millisecond) / IOFUDGE)
+#define punch_time (20 * millisecond)
 
 /* The advertised speed of the reader is 300 chars/sec. */
-#define reader_time ((3333 * microsecond) / IOFUDGE)
+#define reader_time (3333 * microsecond)
 
 
 /*********************************************************/

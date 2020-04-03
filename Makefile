@@ -23,23 +23,6 @@ INTERPRETER = pdp8e
 
 ##########################################################################
 #
-# Emulation fudge factor:
-#
-#   IOFUDGE = 1 makes the emulator run with I/O timings that are generally
-#   indistinguishable from real hardware, as measured by such software
-#   tricks as counting iterations of a polling loop between I/O initiation
-#   and completion.  IOFUDGE > 1 makes I/O run faster, desirable if your
-#   emulator is slower than the original hardware and you want realistic
-#   I/O behavior.
-#
-#   Recommended values:  For IBM RT, 20; 25Mhz SPARC, 5
-
-# FUDGE = -DIOFUDGE=1
-FUDGE = -DIOFUDGE=20
-
-
-##########################################################################
-#
 # Machine Configuration Section:
 #
 #   In effect, the skeleton of the emulator is an omnibus, into which you
@@ -60,7 +43,7 @@ FUDGE = -DIOFUDGE=20
 
 # KK8E with debug support -- the above hardware with an added trace package
 cpu =   kk8e.o debug.o
-CPU = -DKK8E -DDEBUG -std=c89
+CPU = -DKK8E -DDEBUG
 
 
 #---- exactly one of the following definition triplets must be uncommented
@@ -93,17 +76,13 @@ INTERN = -DKM8E -DDK8E
 
 # PC8E -- Paper-Tape Reader-Punch, M840
 
-# VC8E -- Vector (actually point-plot) CRT display, M869 + M885
-#           the display type and size is selectable by editing vc8e.c
 
 # CR8F -- CR8F Card reader and Control
 
 # RX8E -- RX01 diskette drive, M8357 interface
 
-extern =   kl8e.o pc8e.o cr8f.o rx8e.o
-EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E	
-#extern =   kl8e.o pc8e.o cr8f.o rx8e.o vc8e.o
-#EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E -DVC8E
+extern = kl8e.o pc8e.o cr8f.o rx8e.o
+EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 
 
 #---- Memory; on a real machine, the amount of memory can be selected
@@ -119,7 +98,7 @@ EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 # options from the above
 
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
-options = $(CPU) $(CONSOLE) $(INTERN) $(EXTERN) $(FUDGE) $(INTERP)
+options = $(CPU) -std=c89 $(CONSOLE) $(INTERN) $(EXTERN) $(INTERP)
 objects = $(cpu) $(console) $(intern) $(extern)
 libraries = $(conslib)
 

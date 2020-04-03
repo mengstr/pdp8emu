@@ -51,8 +51,8 @@
 /* select the baud rate here (note: if the emulator runs at 1/10 the speed
    of the real PDP-8, 1200 baud simulation will look like 110 to a person! */
 
-#define print_time (baud110 / IOFUDGE)
-#define read_time (baud110 / IOFUDGE)
+#define print_time baud110 
+#define read_time baud110
 
 
 /****************************************************************/

@@ -33,7 +33,7 @@
 #define ticks5000 (200 * microsecond)
 
 /* DK8/EA at 60hz */
-#define tick_time = ( ticks120 / IOFUDGE )
+#define tick_time ( ticks120 )
 
 
 /*********************************************************/
@@ -65,8 +65,7 @@ static void tick_event(int p)
 			irq = irq + 1;
 		}
 	}
-//	schedule( &tick_delay, tick_time, &tick_event, 0 );
-	schedule( &tick_delay, ticks120, &tick_event, 0 );
+	schedule( &tick_delay, tick_time, &tick_event, 0 );
 }
 
 
@@ -77,8 +76,7 @@ static void tick_event(int p)
 void dk8epower(void) /* power-on initialize */
 {
 	init_timer(tick_delay);
-	// schedule( &tick_delay, tick_time / 2, &tick_event, 0 );
-	schedule( &tick_delay, ticks120 / 2, &tick_event, 0 );
+	schedule( &tick_delay, tick_time / 2, &tick_event, 0 );
 }
 
 void dk8einit(void) /* console reset */

@@ -16,9 +16,9 @@
 #include "bus.h"
 
 
-#define read_time ( 1 * millisecond/ IOFUDGE)
-#define pick_lead_time ( 46 * millisecond/ IOFUDGE)
-#define trail_time ( 23 * millisecond/ IOFUDGE)
+#define read_time ( 1 * millisecond)
+#define pick_lead_time ( 46 * millisecond)
+#define trail_time ( 23 * millisecond)
 
 
 /*************************************/
@@ -129,8 +129,7 @@ static void read_even_column(int p)
 	data_ready_flag = 1;
 
 	/* note that even columns never end cards! */
-	// schedule( &read_delay, read_time, read_odd_column, 0);
-	schedule( &read_delay, 1 * millisecond, read_odd_column, 0);
+	schedule( &read_delay, read_time, read_odd_column, 0);
 }
 
 static void read_odd_column(int p)
@@ -144,11 +143,9 @@ static void read_odd_column(int p)
 	data_ready_flag = 1;
 
 	if ( cur_column >= 80){ /* end of card */
-		// schedule( &read_delay, trail_time, end_of_card, 0); 
-		schedule( &read_delay, 23 * millisecond, end_of_card, 0); 
+		schedule( &read_delay, trail_time, end_of_card, 0); 
 	} else {
-		// schedule( &read_delay, read_time, read_even_column, 0); 
-		schedule( &read_delay, 1 * millisecond, read_even_column, 0); 
+		schedule( &read_delay, read_time, read_even_column, 0); 
 	}
 }
 
@@ -340,8 +337,7 @@ void cr8fdev7(int op)
 				}
 				card_done_flag = 0;
 				cur_column = 0;
-				// schedule( &read_delay, pick_lead_time, read_even_column, 0); 
-				schedule( &read_delay, 46 * millisecond, read_even_column, 0); 
+				schedule( &read_delay, pick_lead_time, read_even_column, 0); 
 			}
 		}
                 break;
