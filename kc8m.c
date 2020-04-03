@@ -94,7 +94,7 @@ FILE *f;
 {
 	struct device_rec * temp = devices;
 	while (temp != NULL) {
-		if ((temp -> file)[0] != '\0')) { /* device is mounted */
+		if ((temp -> file)[0] != '\0') { /* device is mounted */
 			fputs( "m ", f );
 			fputs( temp -> name, f );
 			fputs( " ", f );
