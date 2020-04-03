@@ -8,5 +8,6 @@
 # C building artifacts
 *.dSYM
 a.out
+*.o
 pdp8e
 
