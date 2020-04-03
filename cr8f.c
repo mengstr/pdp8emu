@@ -51,8 +51,7 @@ static struct timer read_delay;
 static FILE *reader_stream = NULL;
 static char cardname[NAME_LENGTH];
 
-static void cardclose(u)
-int u;
+static void cardclose(int u)
 {
         if (reader_stream != NULL){
                 fclose(reader_stream);
@@ -70,9 +69,7 @@ int u;
         }
 }
 
-static int cardopen(u, f)
-int u;
-char *f;
+static int cardopen(int u, char *f)
 {
         cardclose(u);
         set_file_name(cardname, f);
@@ -105,22 +102,20 @@ char *f;
 /* Device Implementation */
 /*************************/
 
-static void end_of_card(p)
-int p;
+static void end_of_card(int p)
 {
 	if (ready_done_enable) {
 		irq = irq - card_done_flag + 1;
 	}
 	card_done_flag = 1;
-	if feof(reader_stream) {
+	if (feof(reader_stream)) {
 		cardclose(0);
 	}
 }
 
-static void read_odd_column();    /* forward declaration */
+static void read_odd_column(int);    /* forward declaration */
 
-static void read_even_column(p)
-int p;
+static void read_even_column(int p)
 {
 	byte1 = fgetc(reader_stream);
 	byte2 = fgetc(reader_stream);
@@ -134,11 +129,11 @@ int p;
 	data_ready_flag = 1;
 
 	/* note that even columns never end cards! */
-	schedule( &read_delay, read_time, read_odd_column, 0);
+	// schedule( &read_delay, read_time, read_odd_column, 0);
+	schedule( &read_delay, 1 * millisecond, read_odd_column, 0);
 }
 
-static void read_odd_column(p)
-int p;
+static void read_odd_column(int p)
 {
 	read_buffer = ((byte2 & 0017) << 8) | byte3;
 	cur_column++;
@@ -149,9 +144,11 @@ int p;
 	data_ready_flag = 1;
 
 	if ( cur_column >= 80){ /* end of card */
-		schedule( &read_delay, trail_time, end_of_card, 0); 
+		// schedule( &read_delay, trail_time, end_of_card, 0); 
+		schedule( &read_delay, 23 * millisecond, end_of_card, 0); 
 	} else {
-		schedule( &read_delay, read_time, read_even_column, 0); 
+		// schedule( &read_delay, read_time, read_even_column, 0); 
+		schedule( &read_delay, 1 * millisecond, read_even_column, 0); 
 	}
 }
 
@@ -166,7 +163,7 @@ char compressed_code[4096];
 /* map 12 bit card codes to 6 bit "holerith codes" (truncated ASCII) */
 char hollerith_code[4096];
 
-void init_conversions()
+void init_conversions(void)
 /* initialize conversion tables */
 {
 	int i;
@@ -234,7 +231,7 @@ void init_conversions()
 /* Initialization */
 /******************/
 
-cr8fpower() /* global initialize */
+void cr8fpower(void) /* global initialize */
 {
         /* set up timers used to delay I/O activity */
         init_timer(read_delay);
@@ -245,7 +242,7 @@ cr8fpower() /* global initialize */
 			 cardname);
 }
 
-cr8finit() /* console reset */
+void cr8finit(void) /* console reset */
 {
         true_trouble_enable = 0;
 	ready_done_enable = 1;
@@ -260,8 +257,7 @@ cr8finit() /* console reset */
 /* IOT Instructions */
 /********************/
 
-void cr8fdev3(op)
-int op;
+void cr8fdev3(int op)
 {
         switch (op) {
         case 01: /* RCSF */
@@ -314,8 +310,7 @@ int op;
         }
 }
 
-void cr8fdev7(op)
-int op;
+void cr8fdev7(int op)
 {
         switch (op) {
         case 01: /* RCSD */
@@ -345,8 +340,8 @@ int op;
 				}
 				card_done_flag = 0;
 				cur_column = 0;
-				schedule( &read_delay,
-					pick_lead_time, read_even_column, 0); 
+				// schedule( &read_delay, pick_lead_time, read_even_column, 0); 
+				schedule( &read_delay, 46 * millisecond, read_even_column, 0); 
 			}
 		}
                 break;

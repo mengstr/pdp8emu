@@ -10,6 +10,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 #include "realtime.h"
 #include "bus.h"
@@ -20,10 +21,7 @@
 /* utility functions */
 /*********************/
 
-ttyoctal( num, digits, suffix )
-int num;
-int digits;
-char * suffix;
+void ttyoctal(int num, int digits ,char * suffix)
 {
 	char buf[32];
 	int temp = num;
@@ -60,13 +58,14 @@ struct device_rec {
 };
 static struct device_rec * devices = NULL;
 
-void register_device(m,d,u,n,l,f)
-int (* m)(); /* hook to mount file on device */
-void (* d)(); /* hook to dismount mounted file */
-int u; /* device unit */
-char * n; /* device name */
-char * l; /* descriptive device name */
-char * f; /* file attached to device */
+void register_device(
+	int (* m)(), /* hook to mount file on device */
+	void (* d)(), /* hook to dismount mounted file */
+	int u, /* device unit */
+	char * n, /* device name */
+	char * l, /* descriptive device name */
+	char * f /* file attached to device */
+)
 {
 	struct device_rec * temp;
 	temp = (struct device_rec *)malloc( sizeof( struct device_rec ) );
@@ -80,7 +79,7 @@ char * f; /* file attached to device */
 	devices = temp;
 }
 
-close_devices()
+void close_devices(void)
 {
 	struct device_rec * temp = devices;
 	while (temp != NULL) {
@@ -89,8 +88,7 @@ close_devices()
 	}
 }
 
-dump_devices( f )
-FILE *f;
+void dump_devices(FILE *f)
 {
 	struct device_rec * temp = devices;
 	while (temp != NULL) {
@@ -105,7 +103,7 @@ FILE *f;
 	}
 }
 
-static list_devices()
+static void list_devices(void)
 {
 	struct device_rec * temp = devices;
 	ttyputs( "\r\n" );
@@ -118,8 +116,7 @@ static list_devices()
 	}
 }
 
-static struct device_rec * get_device(n)
-char * n;
+static struct device_rec * get_device(char * n)
 {
 	struct device_rec * temp = devices;
 	while ((temp != NULL) && (strcmp(temp -> name, n) != 0)) {
@@ -128,9 +125,7 @@ char * n;
 	return temp;
 }
 
-void mount_device( n, f )
-char * n;
-char * f;
+void mount_device(char * n, char * f)
 {
 	/* quietly try to mount files on devices, used during startup */
 	struct device_rec * d;
@@ -169,7 +164,7 @@ PDP-8/E emulator, commands are:\r\n\
  to dismount file, mount nothing on the device\r\n\
 \n";
 
-static void console_event()
+static void console_event(void)
 /* all console functions happen here! */
 {
 	int number = -1; /* number from command line */
@@ -327,27 +322,25 @@ static void console_event()
 /* Interface between cpu implementation and control panel */
 /**********************************************************/
 
-static void hitbreak() /* called by keyboard server to get attention */
+static void hitbreak(void) /* called by keyboard server to get attention */
 {
 	run = 0;
 	schedule( &console_delay, 0L, console_event, 0 );
 }
 
-kc8power(argc,argv) /* power-on initialize */
-int argc;
-char** argv;
+void kc8power(int argc, char **argv) /* power-on initialize */
 {
 	init_timer( console_delay );
 	ttybreak = hitbreak;
 	ttyputs( "PDP-8 Emulator, type ? for help.\r\n" );
 }
 
-kc8init() /* console reset */
+void kc8init(void) /* console reset */
 {
 	/* nothing to do here */
 }
 
-kc8halt() /* respond to halt instruction */
+void kc8halt(void) /* respond to halt instruction */
 {
 	/* force console event! */
 	schedule( &console_delay, 0L, console_event, 0 );

@@ -15,6 +15,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 
 #ifdef TERMIOS
@@ -62,14 +63,15 @@ static struct termios oldstate; /* tty state prior to reset */
 static struct sgttyb oldstate; /* tty state prior to reset */
 #endif
 
-static void mykill(arg)  /* called to kill process */
-int arg; /* ignored */
+void ttyrestore(void);  /* forward declaration */
+
+static void mykill(int arg)  /* called to kill process */
 {
 	ttyrestore();
 	exit(-1);
 }
 
-ttyraw() /* save tty state and convert to raw mode */
+void ttyraw(void) /* save tty state and convert to raw mode */
 {
 	/* take over the interactive terminal */
 	{ /* get old TTY mode for restoration on exit */
@@ -114,7 +116,7 @@ ttyraw() /* save tty state and convert to raw mode */
 	}
 }
 
-ttyrestore() /* return console to user */
+void ttyrestore(void) /* return console to user */
 {
 #ifdef TERMIOS
 	ioctl( keyboard, TCSETS, &oldstate );
@@ -130,8 +132,7 @@ ttyrestore() /* return console to user */
 
 void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
 
-ttyputc(ch) /* put character to console */
-char ch;
+void ttyputc(char ch) /* put character to console */
 {
 	int count;
 	char buf = ch;
@@ -150,8 +151,7 @@ static int stuffhead = 0; /* head pointer for stuffing queue */
 static int stufftail = 0; /* tail pointer for stuffing queue */
 static char stuffqueue[stufflen];
 
-void ttystuff(ch) /* stuff a char into input stream from auxiliary source */
-char ch;
+void ttystuff(char ch) /* stuff a char into input stream from auxiliary source */
 {
 	int newtail = (stufftail + 1) % stufflen;
 	if (newtail != stuffhead) { /* discards excess input */
@@ -160,7 +160,7 @@ char ch;
 	}
 }
 
-int ttypoll() /* poll for a character from the console */
+int ttypoll(void) /* poll for a character from the console */
 {
 	int count;
 	char buf;
@@ -205,7 +205,7 @@ int ttypoll() /* poll for a character from the console */
 	}
 }
 
-int ttygetc() /* blocking 7 bit read from console */
+int ttygetc(void) /* blocking 7 bit read from console */
 {
 	int count;
 	char buf;
@@ -232,8 +232,7 @@ int ttygetc() /* blocking 7 bit read from console */
 	return buf & 0177;
 }
 
-ttyputs(buf) /* put string to console */
-char * buf;
+void ttyputs(char * buf) /* put string to console */
 {
 	int count;
 	for (count = 0; buf[count] != '\0'; count++) {;};
@@ -241,9 +240,7 @@ char * buf;
 	fsync( display );
 }
 
-ttygets(buf,len) /* get string from console */
-char * buf;
-int len;
+void ttygets(char * buf, int len) /* get string from console */
 {
 	int i = 0;
 	int ch;

@@ -21,7 +21,7 @@ static int locations[32768];
 /* Initialization used by CAF and reset switch */
 /***********************************************/
 
-reset_debug() /* power-on initialize */
+void reset_debug(void) /* power-on initialize */
 {
 	int i;
 	for (i=0; i<4096; i++) {
@@ -37,8 +37,7 @@ reset_debug() /* power-on initialize */
 /* Accumulate histogram */
 /************************/
 
-accumulate_debug(p,m)
-int p,m;
+void accumulate_debug(int p, int m)
 {
 	instructions[m]++;
 	locations[p]++;
@@ -49,7 +48,7 @@ int p,m;
 /* Interface to console */
 /************************/
 
-output_debug() /* show histogram */
+void output_debug(void) /* show histogram */
 {
 	int i;
 	char buf[80];

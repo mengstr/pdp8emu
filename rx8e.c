@@ -73,8 +73,7 @@ static int current_sector[2];
 static struct timer rx8e_delay;
 static struct timer rx01_delay;
 
-static diskclose(u)
-int u;
+static void diskclose(int u)
 {
 	if (disk[u] != NULL) {
 		fseek( disk[u], 0L, 0 );
@@ -85,9 +84,7 @@ int u;
 	}
 }
 
-static int diskopen(u, f)
-int u;
-char * f;
+static int diskopen(int u, char * f)
 {
 	diskclose(u);
 	set_file_name( diskname[u], f );
@@ -110,7 +107,7 @@ char * f;
 	return (disk[u] != NULL);
 }
 
-rx8epower() /* power-on initialize */
+void rx8epower(void) /* power-on initialize */
 {
 	disk[0] = NULL;
 	disk[1] = NULL;
@@ -164,7 +161,7 @@ static int interrupt_enable;
 /* function awaiting RX01 action */
 static int rx01_function;
 
-static void rx01_done()
+static void rx01_done(void)
 /* called from within rx01_event() to indicate finishing of a rx01 operation */
 {
 	done_flag = 1;
@@ -175,8 +172,7 @@ static void rx01_done()
 	interface_register = RXES;
 }
 
-static void rx01_event(p)
-int p;
+static void rx01_event(int p)
 { /* called from timer as each sector spins by disk heads */
 	int u;
 
@@ -287,7 +283,7 @@ int p;
 static int partial; /* partial completion state for multiple byte transfers */
 static int bufpos;  /* position in buffer */
 
-static void rx8_done()
+static void rx8_done(void)
 /* called from withing rx8e_event() to indicate end of an rx8 operation */
 {
 	done_flag = 1;
@@ -299,8 +295,7 @@ static void rx8_done()
 	interface_register = RXES;
 }
 
-static void rx8e_event(p)
-int p;
+static void rx8e_event(int p)
 { /* called from timer when an interface delay has completed */
 	switch (p) {
 	case rx8_init: /* initialize step 1, start seek + 10 on drive 1 */
@@ -484,7 +479,7 @@ int p;
 /* Initialization used by CAF and reset switch */
 /***********************************************/
 
-rx8einit() /* console reset or programmed reset */
+void rx8einit(void) /* console reset or programmed reset */
 {
 	int u;
 	for (u = 0; u <= 1; u++) {
@@ -520,8 +515,7 @@ rx8einit() /* console reset or programmed reset */
 /* IOT Instructions */
 /********************/
 
-rx8edev(op)
-int op;
+void rx8edev(int op)
 {
 	switch (op) {
 	case 00: /* NOP */

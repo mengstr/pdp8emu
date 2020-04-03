@@ -16,7 +16,7 @@
 /* Initialization */
 /******************/
 
-km8epower() /* global initialize */
+void km8epower(void) /* global initialize */
 {
 	ifr = 0;
         ib = 0;
@@ -27,7 +27,7 @@ km8epower() /* global initialize */
 }
 
 
-km8einit() /* console reset */
+void km8einit(void) /* console reset */
 {
 	km8e_uif = 0;
 	/* reset to user mode eventually */
@@ -37,8 +37,7 @@ km8einit() /* console reset */
 /* IOT Instructions */
 /********************/
 
-km8edev(op)
-int op;
+void km8edev(int op)
 {
 	switch (op & 07) {
 	case 00:

@@ -86,8 +86,7 @@ static int print_buffer;
 /* Device Implementation */
 /*************************/
 
-static void keyboard_event(p) /* called to poll for keyboard input */
-int p;
+static void keyboard_event(int p) /* called to poll for keyboard input */
 {
 	int poll;
 
@@ -107,13 +106,12 @@ int p;
 	schedule( &read_delay, read_time, keyboard_event, 0 );
 }
 
-static read_character()
+static void read_character(void)
 { /* called to enable keyboard_event when reading from tape */
 	/* right now, tape is not supported, so this does nothing */
 }
 
-static void print_event(p)
-int p;
+static void print_event(int p)
 { /* called from timer when a byte has been successfully printed */
 	/* this code allows for the DEC convention of setting the high bit */
 	ttyputc( print_buffer & 0177 );
@@ -123,7 +121,7 @@ int p;
 	}
 }
 
-static print_character()
+static void print_character(void)
 { /* schedule the completion of a print "print_time" in the future */
 	schedule( &print_delay, print_time, print_event, 0 );
 }
@@ -133,7 +131,7 @@ static print_character()
 /* Initialization */
 /******************/
 
-kl8epower() /* global initialize */
+void kl8epower(void) /* global initialize */
 {
 	/* set up timers used to delay I/O activity */
         init_timer(print_delay);
@@ -144,7 +142,7 @@ kl8epower() /* global initialize */
 }
 
 
-kl8einit() /* console reset */
+void kl8einit(void) /* console reset */
 {
 	keyboard_flag = 0;
 	print_flag = 0;
@@ -155,8 +153,7 @@ kl8einit() /* console reset */
 /* IOT Instructions */
 /********************/
 
-kl8edev3(op)
-int op;
+void kl8edev3(int op)
 {
 	switch (op) {
 	case 00: /* KCF */
@@ -209,8 +206,7 @@ int op;
 	}
 }
 
-kl8edev4(op)
-int op;
+void kl8edev4(int op)
 {
 	switch (op) {
 	case 00: /* TFL */

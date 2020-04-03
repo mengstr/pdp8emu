@@ -60,7 +60,7 @@ FUDGE = -DIOFUDGE=20
 
 # KK8E with debug support -- the above hardware with an added trace package
 cpu =   kk8e.o debug.o
-CPU = -DKK8E -DDEBUG
+CPU = -DKK8E -DDEBUG -std=c89
 
 
 #---- exactly one of the following definition triplets must be uncommented
@@ -69,11 +69,6 @@ CPU = -DKK8E -DDEBUG
 console =   kc8m.o
 CONSOLE = -DKC8M
 conslib =
-
-# KC8E -- PDP-8/E Programmer's Console (X-windows lights and switches)
-#console =   kc8e.o
-#CONSOLE = -DKC8E
-#conslib = -lXt -lX11
 
 
 #---- any of the following internal options may be selected by including
@@ -86,8 +81,8 @@ conslib =
 # DK8E -- Real-Time Clock, M882 or M8830
 #           the interrupt rate is selectable by editing dk8e.c
 
-intern =   km8e.o
-INTERN = -DKM8E
+intern =  km8e.o dk8e.o
+INTERN = -DKM8E -DDK8E
 
 
 #---- any of the following external options may be selected by including
@@ -105,8 +100,8 @@ INTERN = -DKM8E
 
 # RX8E -- RX01 diskette drive, M8357 interface
 
-extern =   kl8e.o pc8e.o
-EXTERN = -DKL8E -DPC8E
+extern =   kl8e.o pc8e.o cr8f.o rx8e.o
+EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E	
 #extern =   kl8e.o pc8e.o cr8f.o rx8e.o vc8e.o
 #EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E -DVC8E
 

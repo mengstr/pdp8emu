@@ -24,17 +24,18 @@
 
 static struct timer * head; /* points to the next timer in the queue */
 
-void init_timers()  /* initialize timer subsystem */
+void init_timers(void)  /* initialize timer subsystem */
 {
 	head = niltimer; /* there is no pending timer initially */
 	countdown = 0x7FFFFFFF; /* so put off next firing a long time */
 }
 
-void schedule(t,d,a,p)  /* schedule timer t after a delay of d ticks */
-struct timer * t;
-long int d;
-void (* a)();
-int p;
+void schedule(  /* schedule timer t after a delay of d ticks */
+	struct timer * t,
+	long int d,
+	void (* a)(),
+	int p
+)
 {
 	t->action = a;
 	t->param = p;
@@ -71,8 +72,7 @@ int p;
 	}
 }
 
-long int query_timer(t)  /* find how much time remains on t */
-struct timer * t;
+long int query_timer(struct timer * t)  /* find how much time remains on t */
 {
 	if (t->delay < 0) { /* timer is not in queue */
 		return -1;
@@ -87,7 +87,7 @@ struct timer * t;
 	}
 }
 
-void fire_timer()  /* cause timer to fire at current time */
+void fire_timer(void)  /* cause timer to fire at current time */
 {
 	if (head == niltimer) { /* no pending timer */
 		/* put off next firing as long as possible */

@@ -39,8 +39,7 @@ static char readername[NAME_LENGTH];
 static struct timer punch_delay;
 static struct timer reader_delay;
 
-static void readerclose(u)
-int u;
+static void readerclose(int u)
 {
 	if (reader_stream != NULL) {
 		fclose( reader_stream );
@@ -49,9 +48,7 @@ int u;
 	}
 }
 
-static int readeropen(u, f)
-int u;
-char * f;
+static int readeropen(int u, char * f)
 {
 	readerclose(u);
 	set_file_name( readername, f );
@@ -61,8 +58,7 @@ char * f;
 	return (reader_stream != NULL);
 }
 
-static punchclose(u)
-int u;
+static void punchclose(int u)
 {
 	if (punch_stream != NULL) {
 		fclose( punch_stream );
@@ -71,9 +67,7 @@ int u;
 	}
 }
 
-static int punchopen(u, f)
-int u;
-char * f;
+static int punchopen(int u, char * f)
 {
 	punchclose(u);
 	set_file_name( punchname, f );
@@ -83,7 +77,7 @@ char * f;
 	return (punch_stream != NULL);
 }
 
-pc8epower() /* power-on initialize */
+void pc8epower(void) /* power-on initialize */
 {
 	punch_stream = NULL;
 	reader_stream = NULL;
@@ -114,8 +108,7 @@ static int interrupt_enable;
 /* Device implementation */
 /*************************/
 
-static void reader_event(p)
-int p;
+static void reader_event(int p)
 { /* called from timer when a byte has been successfully read */
 	if (reader_stream != NULL) {
 		reader_buffer = getc(reader_stream);
@@ -134,14 +127,13 @@ int p;
 	reader_flag = 1; /* signal that read is complete */
 }
 
-static read_character()
+static void read_character(void)
 { /* schedule the completion of a read "reader_time" in the future */
 	schedule( &reader_delay, reader_time, reader_event, 0 );
 }
 
 
-static void punch_event(p)
-int p;
+static void punch_event(int p)
 { /* called from timer when a byte has been successfully printed */
 	if (punch_stream != NULL) {
 		putc(punch_buffer, punch_stream);
@@ -154,7 +146,7 @@ int p;
 	punch_flag = 1;
 }
 
-static punch_character()
+static void punch_character(void)
 { /* schedule the completion of a punch "punch_time" in the future */
 	schedule( &punch_delay, punch_time, punch_event, 0 );
 }
@@ -165,7 +157,7 @@ static punch_character()
 /* Initialization used by CAF and reset switch */
 /***********************************************/
 
-pc8einit() /* console reset */
+void pc8einit(void) /* console reset */
 {
 	punch_flag = 0;
 	reader_flag = 0;
@@ -177,8 +169,7 @@ pc8einit() /* console reset */
 /* IOT Instructions */
 /********************/
 
-pc8edev1(op)
-int op;
+void pc8edev1(int op)
 {
 	switch (op) {
 	case 00: /* RPE */
@@ -220,8 +211,7 @@ int op;
 	}
 }
 
-pc8edev2(op)
-int op;
+void pc8edev2(int op)
 {
 	switch (op) {
 	case 00: /* PCE */

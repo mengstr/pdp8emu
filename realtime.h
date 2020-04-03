@@ -52,8 +52,12 @@ struct timer {
 
 void init_timers(); /* initialize entire timer subsystem */
 
-void schedule(); /* schedule action a(p) on timer t after a delay of d */
-/*           ( struct timer * t, long int d, void (* a)(), int p ) */
+void schedule(  /* schedule timer t after a delay of d ticks */
+	struct timer * t,
+	long int d,
+	void (* a)(),
+	int p
+);
 
 void fire_timer(); /* cause timer to fire at current time */
 

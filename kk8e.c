@@ -14,6 +14,7 @@
 #define MAIN
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "bus.h"
 #include "realtime.h"
 
@@ -32,7 +33,7 @@ int enab_del; /* secondary enable flipflop, used to delay enable operations */
 /******************/
 
 /* Both the reset key on the console and the CAF instruction call this */
-clearflags()
+void clearflags(void)
 {
 	/* device specific effects of the reset operation */
 	kc8init(); /* front panel */
@@ -73,24 +74,19 @@ clearflags()
 	enab_del = 0;
 }
 
-static closecore(u)
-int u;
+static void closecore(int u)
 {
 	corename[0] = '\0';
 }
 
-static int opencore(u, f)
-int u;
-char * f;
+static int opencore(int u, char * f)
 {
 	set_file_name( corename, f );
 	return(1);
 }
 
-powerup(argc,argv)
+void powerup(int argc, char** argv)
 /* called only once for power on */
-int argc;
-char** argv;
 {
 	/* first, see if there is a specified core image save file,
 	   since PDP-8/E machines usually have core memory and tend
@@ -157,7 +153,7 @@ char** argv;
 	clearflags();
 }
 
-powerdown()
+void powerdown(void)
 /* called only once from the console to exit the emulator */
 {
 	ttyrestore();
@@ -242,9 +238,7 @@ powerdown()
 
 
 /* Emulate the fetch/execute cycle */
-main(argc,argv)
-int argc;
-char **argv;
+int main(int argc, char **argv)
 {
 	powerup(argc,argv);
 	if (run == 0) {

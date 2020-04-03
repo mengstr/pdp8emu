@@ -6,6 +6,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include "bus.h"
 
@@ -16,9 +17,10 @@
  * embedded blanks by stopping the copy at the first blank.  It is safe   *
  * to call this with the same parameter for both arguments.               */
 
-set_file_name(f,s)
-char * f; /* buffer for file name */
-char * s; /* string from which name comes */
+void set_file_name(
+	char * f, /* buffer for file name */
+	char * s /* string from which name comes */
+)
 {
         int i = 0; /* index into f */
         int j = 0; /* index into s */
@@ -31,9 +33,7 @@ char * s; /* string from which name comes */
 
 /* command line argument processing */
 
-getargs(argc, argv)
-int argc;
-char *argv[];
+void getargs(int argc, char *argv[])
 {
         int i;
 
@@ -80,7 +80,7 @@ char *argv[];
  * a lower case letter, or the end of the emulator's memory, which ever   *
  * is encountered first.                                                  */
 
-readcore()
+void readcore(void)
 {
 	FILE *f;
 	int  a; /* memory address to load */
@@ -165,7 +165,7 @@ readcore()
 	}
 }
 
-dumpcore()
+void dumpcore(void)
 {
 	FILE *f;
 	int a, max; /* memory address */
