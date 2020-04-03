@@ -55,25 +55,25 @@ FUDGE = -DIOFUDGE=20
 #---- exactly one of the following definition pairs must be uncommented
 
 # KK8E -- the PDP-8/E CPU, M8300, M8310, M8320
-cpu =   kk8e.o
-CPU = -DKK8E
+#cpu =   kk8e.o
+#CPU = -DKK8E
 
 # KK8E with debug support -- the above hardware with an added trace package
-#cpu =   kk8e.o debug.o
-#CPU = -DKK8E -DDEBUG
+cpu =   kk8e.o debug.o
+CPU = -DKK8E -DDEBUG
 
 
 #---- exactly one of the following definition triplets must be uncommented
 
 # KC8M -- PDP-8/M Simple (non-visual) TTY oriented control panel
-#console =   kc8m.o
-#CONSOLE = -DKC8M
-#conslib =
+console =   kc8m.o
+CONSOLE = -DKC8M
+conslib =
 
 # KC8E -- PDP-8/E Programmer's Console (X-windows lights and switches)
-console =   kc8e.o
-CONSOLE = -DKC8E
-conslib = -lXt -lX11
+#console =   kc8e.o
+#CONSOLE = -DKC8E
+#conslib = -lXt -lX11
 
 
 #---- any of the following internal options may be selected by including
@@ -105,10 +105,10 @@ INTERN = -DKM8E
 
 # RX8E -- RX01 diskette drive, M8357 interface
 
-#extern =   kl8e.o pc8e.o
-#EXTERN = -DKL8E -DPC8E
-extern =   kl8e.o pc8e.o cr8f.o rx8e.o vc8e.o
-EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E -DVC8E
+extern =   kl8e.o pc8e.o
+EXTERN = -DKL8E -DPC8E
+#extern =   kl8e.o pc8e.o cr8f.o rx8e.o vc8e.o
+#EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E -DVC8E
 
 
 #---- Memory; on a real machine, the amount of memory can be selected
