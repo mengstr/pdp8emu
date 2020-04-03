@@ -29,7 +29,7 @@
 
 /* absolute path name of file where emulator object code is to be stored
 */
-/*#define PDP8NAME "pdp8e"*/
+#define PDP8NAME "pdp8emu"
 
 /* maximum length of a sensible file name
 */

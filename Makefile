@@ -11,18 +11,6 @@
 
 ##########################################################################
 #
-# Object file name:
-#
-#   The absolute or relative path name of the object file.  If emulator
-#   core images are marked as executable, this will be used as the name
-#   of the interpreter to use when someone executes a core image.  Obvious
-#   names are pdp8, pdp8e, pdp8f and pdp8m.
-
-INTERPRETER = pdp8e
-
-
-##########################################################################
-#
 # Machine Configuration Section:
 #
 #   In effect, the skeleton of the emulator is an omnibus, into which you
@@ -98,7 +86,7 @@ EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 # options from the above
 
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
-options = $(CPU) -std=c89 $(CONSOLE) $(INTERN) $(EXTERN) $(INTERP)
+options = $(CPU) -std=c89 $(CONSOLE) $(INTERN) $(EXTERN)
 objects = $(cpu) $(console) $(intern) $(extern)
 libraries = $(conslib)
 
@@ -120,8 +108,8 @@ libraries = $(conslib)
 # Note that, since this makefile contains the option settings,
 # it references itself!
 
-$(INTERPRETER): $(objects) realtime.o ttyaccess.o utility.o
-	cc -o pdp8e $(objects) realtime.o ttyaccess.o utility.o $(libraries)
+pdp8emu: $(objects) realtime.o ttyaccess.o utility.o
+	cc -o pdp8emu $(objects) realtime.o ttyaccess.o utility.o $(libraries)
 
 $(objects) utility.o: bus.h realtime.h Makefile
 
