@@ -1,0 +1,12 @@
+# OS specific files
+.DS_Store
+
+# Editor- and temporary files
+*.tmp
+*~
+
+# C building artifacts
+*.dSYM
+a.out
+pdp8e
+
