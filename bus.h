@@ -55,11 +55,7 @@ EXTERN char * progname; /* name of program itself (argv[0]) */
    the KM8E option is present.
 */
 
-#ifdef KM8E
 #define MAXMEM 32768
-#else
-#define MAXMEM 4096
-#endif
 
 EXTERN int memory[MAXMEM];
 
@@ -91,7 +87,6 @@ EXTERN int sw;  /* the switch, 1 bit */
    posted by incrementing irq, and withdrawn by decrementing irq.
 */
 
-#ifdef KM8E
 
 /* 3 bit fields stored 12 places left so they can be ORed onto 12 addresses.
 */
@@ -112,4 +107,3 @@ EXTERN int ub; /* the user mode buffer */
 */
 EXTERN int km8e_uif; /* user interrupt flag (local to KM8E but used in KK8E) */
 
-#endif

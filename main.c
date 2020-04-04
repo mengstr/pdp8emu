@@ -46,30 +46,18 @@ void clearflags(void)
 {
 	/* device specific effects of the reset operation */
 	kc8init(); /* front panel */
-#ifdef DEBUG
 	reset_debug();
-#endif
 #ifdef KE8E
 	ke8einit(); /* eae */
 #endif
-#ifdef KM8E
 	km8einit(); /* mmu */
-#endif
-#ifdef DK8E
 	dk8einit(); /* real-time clock */
-#endif
 #ifdef KP8E
 	kp8einit(); /* power fail */
 #endif
-#ifdef KL8E
 	kl8einit(); /* console TTY */
-#endif
-#ifdef PC8E
 	pc8einit(); /* paper tape reader punch */
-#endif
-#ifdef CR8F
 	cr8finit(); /* card reader */
-#endif
 #ifdef VC8E
 	vc8einit(); /* point plot display */
 #endif
@@ -128,24 +116,14 @@ void powerup(int argc, char** argv)
 #ifdef KE8E
 	ke8epower(); /* eae */
 #endif
-#ifdef KE8E
 	km8epower(); /* mmu */
-#endif
-#ifdef DK8E
         dk8epower(); /* real-time clock */
-#endif
 #ifdef KP8E
 	kp8epower(); /* power fail */
 #endif
-#ifdef KL8E
         kl8epower(); /* console TTY */
-#endif
-#ifdef PC8E
         pc8epower(); /* paper tape reader punch */
-#endif
-#ifdef CR8F
         cr8fpower(); /* card reader */
-#endif
 #ifdef VC8E
         vc8epower(); /* point plot display */
 #endif
@@ -212,7 +190,6 @@ void powerdown(void)
 /* The following definitions give widely used code for addressing
 */
 
-#ifdef KM8E
 
 #define PAGE_ZERO cpma = ((mb & 0177) | ifr)
 
@@ -227,24 +204,6 @@ void powerdown(void)
 		countdown -= shortcycle;				\
 	}								\
 }
-#else
-
-#define PAGE_ZERO cpma = (mb & 0177)
-
-#define CURRENT_PAGE cpma = (mb & 0177) | (pc & 07600)
-
-#define DEFER_CYCLE {							\
-	if ((cpma & 07770) == 00010) { /* indexed */			\
-		cpma = (memory[cpma] = ((memory[cpma] + 1) & 07777));	\
-		countdown -= longcycle;					\
-	} else { /* normal */						\
-		cpma = memory[cpma];					\
-		countdown -= shortcycle;				\
-	}								\
-}
-
-#endif
-
 
 /* Emulate the fetch/execute cycle */
 int main(int argc, char **argv)
@@ -256,11 +215,7 @@ int main(int argc, char **argv)
 
 	for (;;) {
 		/* setup to fetch from pc */
-#ifdef KM8E
 		cpma = pc | ifr;
-#else
-		cpma = pc;
-#endif
 		/* I/O and console activity happens with CPMA holding PC */
 		while (countdown <= 0) { /* handle pending device activity */
 			fire_timer();
@@ -271,7 +226,6 @@ int main(int argc, char **argv)
 			/* an interrupt occurs */
 			memory[0] = pc;
 			pc = 1;
-#ifdef KM8E
 			sf = (ifr >> 9) | (dfr >> 12) | (uf << 6);
 			ifr = 0;
 			ib = 0;
@@ -279,9 +233,6 @@ int main(int argc, char **argv)
 			uf = 0;
 			ub = 0;
 			cpma = pc | ifr;
-#else
-			cpma = pc;
-#endif
 			countdown -= longcycle;
 			enab = 0;
 		}
@@ -291,9 +242,7 @@ int main(int argc, char **argv)
 
 		/* the actual instruction fetch is here */
 		mb = memory[cpma];
-#ifdef DEBUG
 		accumulate_debug(cpma,mb);
-#endif
 		countdown -= shortcycle;
 
 		switch (mb >> 7) { /* note that we decode i and z here */
@@ -451,10 +400,8 @@ int main(int argc, char **argv)
 
 		case opJMS | DIRECT | ZERO:
 			PAGE_ZERO;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
-#endif
 			enab_rtf = 1;
 			memory[cpma] = (pc + 1) & 07777;
 			countdown -= longcycle;
@@ -463,11 +410,9 @@ int main(int argc, char **argv)
 
 		case opJMS | DIRECT | CURRENT:
 			CURRENT_PAGE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			memory[cpma] = (pc + 1) & 07777;
 			countdown -= longcycle;
@@ -477,11 +422,9 @@ int main(int argc, char **argv)
 		case opJMS | DEFER | ZERO:
 			PAGE_ZERO;
 			DEFER_CYCLE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			memory[cpma] = (pc + 1) & 07777;
 			countdown -= longcycle;
@@ -491,11 +434,9 @@ int main(int argc, char **argv)
 		case opJMS | DEFER | CURRENT:
 			CURRENT_PAGE;
 			DEFER_CYCLE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			memory[cpma] = (pc + 1) & 07777;
 			countdown -= longcycle;
@@ -505,22 +446,18 @@ int main(int argc, char **argv)
 
 		case opJMP | DIRECT | ZERO:
 			PAGE_ZERO;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			pc = cpma & 07777;
 			break;
 
 		case opJMP | DIRECT | CURRENT:
 			CURRENT_PAGE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			pc = cpma & 07777;
 			break;
@@ -528,11 +465,9 @@ int main(int argc, char **argv)
 		case opJMP | DEFER | ZERO:
 			PAGE_ZERO;
 			DEFER_CYCLE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			pc = cpma & 07777;
 			break;
@@ -540,11 +475,9 @@ int main(int argc, char **argv)
 		case opJMP | DEFER | CURRENT:
 			CURRENT_PAGE;
 			DEFER_CYCLE;
-#ifdef KM8E
 			ifr = ib;
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
-#endif
 			enab_rtf = 1;
 			pc = cpma & 07777;
 			break;
@@ -558,13 +491,12 @@ int main(int argc, char **argv)
 		case opIOT | DEFER | CURRENT:
 
 			pc = (pc + 1) & 07777;
-#ifdef KM8E
 			if (uf == 1) { /* illegal in user mode */
 				irq = irq + 1;
 				km8e_uif = 1;
 				break; /* abort instruction */
 			}
-#endif
+
 			switch ((mb >> 3) & 077) { /* decode device address */
 
 			case 000:
@@ -594,13 +526,9 @@ int main(int argc, char **argv)
 					   | (gt?)	       /* bit 1 */
 #endif
 					   | ((irq > 0) << 9)  /* bit 2 */
-#ifdef KM8E
 					   | (0)	/*?*/  /* bit 3 */
-#endif
 					   | (enab << 7)       /* bit 4 */
-#ifdef KM8E
 					   | sf 	       /* bit 5-11 */
-#endif
 					;
 					break;
 				case 05: /* RTF */
@@ -611,11 +539,9 @@ int main(int argc, char **argv)
 					/* nothing */		/* bit 2 */
 					/* nothing */		/* bit 3 */
 					enab = 1;		/* bit 4 */
-#ifdef KM8E
 					ub = (ac & 00100) >> 6; /* bit 5 */
 					ib = (ac & 00070) << 9; /* bit 6-8 */
-					dfr = (ac & 00007) << 12;/* bit 9-11 */
-#endif
+					dfr = (ac & 00007) << 12;/* bit 9-11 */// #endif
 					/* disable interrupts until branch */
 					enab_rtf = 0;
 					break;
@@ -632,23 +558,19 @@ int main(int argc, char **argv)
 				}
 				break;
 
-#ifdef PC8E
 			case 001:
 				pc8edev1(mb & 07);
 				break;
 			case 002:
 				pc8edev2(mb & 07);
 				break;
-#endif
 
-#ifdef KL8E
 			case 003:
 				kl8edev3(mb & 07);
 				break;
 			case 004:
 				kl8edev4(mb & 07);
 				break;
-#endif
 
 #ifdef VC8E
 			case 005:
@@ -656,13 +578,10 @@ int main(int argc, char **argv)
 				break;
 #endif
 
-#ifdef DK8E
 			case 013:
 				dk8edev(mb & 07);
 				break;
-#endif
 
-#ifdef KM8E
 			case 020:
 			case 021:
 			case 022:
@@ -673,16 +592,13 @@ int main(int argc, char **argv)
 			case 027:
 				km8edev(mb & 077);
 				break;
-#endif
 
-#ifdef CR8F
 			case 063:
 				cr8fdev3(mb & 07);
 				break;
 			case 067:
 				cr8fdev7(mb & 07);
 				break;
-#endif
 
 #ifdef RX8E
 			case 075:
@@ -944,14 +860,14 @@ int main(int argc, char **argv)
 				if (mb & 00200) { /* CLA */
 					ac = 00000;
 				}
-#ifdef KM8E
+
 				if ((uf != 0) && ((mb & 00006) != 0)) {
 					/* illegal in user mode */
 					irq = irq + 1;
 					km8e_uif = 1;
 					break; /* abort instruction */
 				}
-#endif
+
 				if (mb & 00004) { /* OSR */
 					ac = ac | sr;
 				}
@@ -989,21 +905,13 @@ int main(int argc, char **argv)
 					case 00: /* NOP */
 						break;
 					case 01: /* SCL */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						sc = (~mb) & 00037;
 						break;
 					case 02: /* MUY */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						{
@@ -1015,11 +923,7 @@ int main(int argc, char **argv)
 						sc = 013;
 						break;
 					case 03: /* DVI */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						if (ac < mb) { /* no overflow */
@@ -1063,11 +967,7 @@ int main(int argc, char **argv)
 						}
 						break;
 					case 05: /* SHL */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						sc = (~mb) & 00037;
@@ -1087,11 +987,7 @@ int main(int argc, char **argv)
 						}
 						break;
 					case 06: /* ASR */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						sc = (~mb) & 00037;
@@ -1110,11 +1006,7 @@ int main(int argc, char **argv)
 						}
 						break;
 					case 07: /* LSR */
-#ifdef KM8E
 						cpma = pc | ifr;
-#else
-						cpma = pc;
-#endif
 						mb = memory[cpma];
 						pc = (pc + 1) & 07777;
 						sc = (~mb) & 00037;

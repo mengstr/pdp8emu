@@ -21,17 +21,9 @@
 #
 
 cpu = main.o debug.o
-CPU = -DKK8E -DDEBUG
-
 console = frontpanel-kc8m.o
-CONSOLE = -DKC8M
-
 intern =  mem-km8e.o rtc-dk8e.o
-INTERN = -DKM8E -DDK8E
-
 extern = tty-kl8e.o hstape-pc8e.o card-cr8f.o floppy-rx8e.o
-EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
-
 
 #---- Memory; on a real machine, the amount of memory can be selected
 #     as any multiple of 4096 up to 32768.  Here, to avoid the cost of
