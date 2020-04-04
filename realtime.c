@@ -8,6 +8,8 @@
 
 #include "realtime.h"
 
+long int countdown; /* the delay until the next timer expiration */
+
 /************************************************/
 /* Read the comments in the include file first! */
 /************************************************/

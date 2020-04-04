@@ -6,14 +6,6 @@
             of devices attached to instruction-set level computer emulators.
 */
 
-/* The following trick puts extern on definitions if not in the main program */
-#ifdef MAIN
-#define EXTERN
-#else
-#define EXTERN extern
-#endif
-
-
 /**********************************************/
 /* Times are measure in 200 nanosecond ticks. */
 /**********************************************/
@@ -61,7 +53,7 @@ void schedule(  /* schedule timer t after a delay of d ticks */
 
 void fire_timer(); /* cause timer to fire at current time */
 
-EXTERN long int countdown; /* the delay until the next timer expiration */
+extern long int countdown; /* the delay until the next timer expiration */
 
 /**************************************************************************/
 /* It is up to the emulator to decrement countdown appropriately as each  */

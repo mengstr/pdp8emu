@@ -10,9 +10,6 @@
    Digital Equipment Corporation, 1975.
 */
 
-/* First, declare that this is a main program */
-#define MAIN
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "bus.h"
@@ -27,6 +24,62 @@
 #include "rtc-dk8e.h"
 #include "tty-kl8e.h"
 #include "mem-km8e.h"
+
+
+
+char corename[NAME_LENGTH]; /* name of core image file, if any */
+char * progname; /* name of program itself (argv[0]) */
+
+int memory[MAXMEM];
+
+
+/*******************************/
+/* Generally visible registers */
+/*******************************/
+
+/* All of the following are visible outside the CPU in some context or
+   another, either to some I/O device or to the front panel.
+*/
+int ac;  /* the accumulator, 12 bits */
+int pc;  /* the program counter, 12 bits */
+int mq;  /* the multiplier quotient, 12 bits */
+int sr;  /* the switch register */
+int cpma;/* the memory address register */
+int mb;  /* the memory buffer register */
+
+int link;/* the link bit, 1 bit, in position 010000 of the word */
+int run; /* the run flipflop, 0 = halt, 1 = running */
+
+int enab;/* interrupt enable bit, 0 = disable, 1=enable */
+int enab_rtf; /* secodary enable needed for RTF deferred enable */
+int irq; /* the interrupt request line, 0 = no request, >0 = request */
+
+int sw;  /* the switch, 1 bit */
+
+/* Note that any positive value of irq indicates a request!  Requests are
+   posted by incrementing irq, and withdrawn by decrementing irq.
+*/
+
+/* 3 bit fields stored 12 places left so they can be ORed onto 12 addresses.
+*/
+int ifr; /* the instruction field register */
+int dfr; /* the data field register */
+int ib; /* the instruction field buffer (copy to if on branch, jsr) */
+
+/* 7 bits, exactly as documented in the small computer handbook
+*/
+int sf; /* the save field register (save ir, if, df on interrupt) */
+
+/* 1 bit, where ub is copied to uf on branch, jsr
+*/
+int uf; /* the user mode flag */
+int ub; /* the user mode buffer */
+
+/* 1 bit, reset on branch, jsr
+*/
+int km8e_uif; /* user interrupt flag (local to KM8E but used in KK8E) */
+
+
 
 /************************************************************/
 /* Declarations of machine components not included in bus.h */
