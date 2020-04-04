@@ -635,15 +635,6 @@ int main(int argc, char **argv)
 				rx8edev(mb & 07);
 				break;
 
-#ifdef TC08
-			case 076:
-				tc08dev6(mb & 07);
-				break;
-			case 077:
-				tc08dev7(mb & 07);
-				break;
-#endif
-
 			default: /* non existant device */
 				break;
 			}
