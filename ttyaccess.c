@@ -136,9 +136,8 @@ void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
 
 void ttyputc(char ch) /* put character to console */
 {
-	int count;
 	char buf = ch;
-	count = write( display, &buf, 1 );
+	write( display, &buf, 1 );
 }
 
 #define BLOCKING 0
