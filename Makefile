@@ -109,6 +109,7 @@ libraries = $(conslib)
 # it references itself!
 
 pdp8emu: $(objects) realtime.o ttyaccess.o utility.o
+	cc --version
 	cc -o pdp8emu $(objects) realtime.o ttyaccess.o utility.o $(libraries)
 
 $(objects) utility.o: bus.h realtime.h Makefile
@@ -135,4 +136,4 @@ check: pdp8emu
 
 # make clean to delete the object files, saving disk space
 clean:
-	rm -f *.o *.bak *~
+	rm -f pdp8emu *.o *.bak *~
