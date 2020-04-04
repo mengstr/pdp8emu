@@ -15,6 +15,8 @@
 #include <termios.h>
 #include <signal.h>
 
+#define ignore_value(x) (__extension__ ({ __typeof__ (x) __x = (x); (void) __x; }))
+
 #define control(ch) (ch & 037)
 
 #define keyboard 0
@@ -103,7 +105,7 @@ void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
 void ttyputc(char ch) /* put character to console */
 {
 	char buf = ch;
-	(void)write( display, &buf, 1 );
+	ignore_value(write( display, &buf, 1 ));
 }
 
 #define BLOCKING 0
@@ -182,7 +184,7 @@ int ttygetc(void) /* blocking 7 bit read from console */
 			fcntl( keyboard, F_SETFL, flag & ~O_NDELAY );
 			mode = BLOCKING;
 		}
-		(void)read( keyboard, &buf, 1 );
+		ignore_value(read( keyboard, &buf, 1 ));
 	}
 
 	breakcount = 0;
