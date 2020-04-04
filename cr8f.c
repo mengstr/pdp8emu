@@ -286,7 +286,7 @@ void cr8fdev3(int op)
 			true_trouble_enable = 1;
 			irq = irq + ready_true_trans_flag + trouble_trans_flag;
 		}
-		if (((ac & 00001) == 04000 )
+		if (((ac & 00001) != 0 )
 		&& (ready_done_enable == 0)) {
 			ready_done_enable = 1;
 			irq = irq + card_done_flag + data_ready_flag;
