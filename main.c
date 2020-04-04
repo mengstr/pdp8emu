@@ -58,9 +58,6 @@ void clearflags(void)
 	kl8einit(); /* console TTY */
 	pc8einit(); /* paper tape reader punch */
 	cr8finit(); /* card reader */
-#ifdef VC8E
-	vc8einit(); /* point plot display */
-#endif
 #ifdef RX8E
 	rx8einit(); /* diskette drive */
 #endif
@@ -124,9 +121,6 @@ void powerup(int argc, char** argv)
         kl8epower(); /* console TTY */
         pc8epower(); /* paper tape reader punch */
         cr8fpower(); /* card reader */
-#ifdef VC8E
-        vc8epower(); /* point plot display */
-#endif
 #ifdef RX8E
 	rx8epower(); /* diskette drive */
 #endif
@@ -571,12 +565,6 @@ int main(int argc, char **argv)
 			case 004:
 				kl8edev4(mb & 07);
 				break;
-
-#ifdef VC8E
-			case 005:
-				vc8edev5(mb & 07);
-				break;
-#endif
 
 			case 013:
 				dk8edev(mb & 07);
