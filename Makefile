@@ -86,7 +86,7 @@ EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 # options from the above
 
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
-options = $(CPU) -DTERMIOS -Wall -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
+options = $(CPU) -Wall -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
 objects = $(cpu) $(console) $(intern) $(extern)
 libraries = $(conslib)
 
@@ -132,4 +132,4 @@ docker:
 
 # make clean to delete the object files, saving disk space
 clean:
-	rm -f *.o
+	rm -f *.o *.bak *~

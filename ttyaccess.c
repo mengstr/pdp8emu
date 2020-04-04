@@ -7,25 +7,12 @@
    Purpose: Code to take over the tty and put it in raw mode
 */
 
-/* WARNING:  This code is highly UNIX dependant!  Linux users may have to
-   include a #define for TERMIOS to force use of the right include file.
-   This define belongs in stdio.h, I think (a very small Linux bug).
-   Alternately (?), the include file <sgtty.h> can be changed to
-   <bsd/sgtty.h> and the code can be compiled with the bsd library */
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-
-#ifdef TERMIOS
 #include <termios.h>
-#else
-#include <sgtty.h>
-#endif
-
 #include <signal.h>
 
 #define control(ch) (ch & 037)
@@ -59,11 +46,7 @@
 /* startup and shutdown */
 /************************/
 
-#ifdef TERMIOS
 static struct termios oldstate; /* tty state prior to reset */
-#else
-static struct sgttyb oldstate; /* tty state prior to reset */
-#endif
 
 void ttyrestore(void);  /* forward declaration */
 
@@ -77,14 +60,9 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 {
 	/* take over the interactive terminal */
 	{ /* get old TTY mode for restoration on exit */
-#ifdef TERMIOS
 		tcgetattr(keyboard, &oldstate);
-#else
-		ioctl( keyboard, TIOCGETP, &oldstate );
-#endif
 	}
 	{ /* put TTY in RAW mode; note: raw mode may be a bit drastic! */
-#ifdef TERMIOS
 		struct termios newstate;
 		tcgetattr(keyboard, &newstate);
 		newstate.c_lflag &= ~ISIG;  /* don't enable signals */
@@ -103,13 +81,6 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 		/* note:  on some UNIX systems, no amount of urging seems
 		   to make it insist on converting cr to nl */
 		tcsetattr(keyboard, TCSANOW, &newstate);
-#else
-		struct sgttyb newstate;
-		ioctl( keyboard, TIOCGETP, &newstate );
-		newstate.sg_flags |= RAW;
-		newstate.sg_flags &= ~ECHO;
-		ioctl( keyboard, TIOCSETP, &newstate );
-#endif
 	}
 	{ /* install handlers to catch attempts to kill process */
 		/* should probably catch other fatal signals too */
@@ -119,12 +90,7 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 
 void ttyrestore(void) /* return console to user */
 {
-#ifdef TERMIOS
 	tcsetattr(keyboard, TCSANOW, &oldstate);
-
-#else
-	ioctl( keyboard, TIOCSETP, &oldstate );
-#endif
 }
 
 
@@ -175,11 +141,7 @@ int ttypoll(void) /* poll for a character from the console */
 		if (mode == BLOCKING) { /* make nonblocking */
 			int flag;
 			flag = fcntl( keyboard, F_GETFL, 0 );
-#ifdef TERMIOS
 			fcntl( keyboard, F_SETFL, flag | O_NDELAY );
-#else
-			fcntl( keyboard, F_SETFL, flag | FNDELAY );
-#endif
 			mode = NONBLOCK;
 		}
 
@@ -217,11 +179,7 @@ int ttygetc(void) /* blocking 7 bit read from console */
 		if (mode != BLOCKING) { /* make nonblocking */
 			int flag;
 			flag = fcntl( keyboard, F_GETFL, 0 );
-#ifdef TERMIOS
 			fcntl( keyboard, F_SETFL, flag & ~O_NDELAY );
-#else
-			fcntl( keyboard, F_SETFL, flag & ~FNDELAY );
-#endif
 			mode = BLOCKING;
 		}
 		read( keyboard, &buf, 1 );
