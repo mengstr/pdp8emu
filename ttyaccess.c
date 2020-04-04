@@ -103,7 +103,7 @@ void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
 void ttyputc(char ch) /* put character to console */
 {
 	char buf = ch;
-	write( display, &buf, 1 );
+	(void)write( display, &buf, 1 );
 }
 
 #define BLOCKING 0
@@ -182,7 +182,7 @@ int ttygetc(void) /* blocking 7 bit read from console */
 			fcntl( keyboard, F_SETFL, flag & ~O_NDELAY );
 			mode = BLOCKING;
 		}
-		read( keyboard, &buf, 1 );
+		(void)read( keyboard, &buf, 1 );
 	}
 
 	breakcount = 0;
