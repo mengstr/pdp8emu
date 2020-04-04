@@ -20,13 +20,13 @@
 #include "realtime.h"
 #include "ttyaccess.h"
 #include "debug.h"
-#include "pc8e.h"
-#include "rx8e.h"
-#include "cr8f.h"
-#include "kc8m.h"
-#include "dk8e.h"
-#include "kl8e.h"
-#include "km8e.h"
+#include "hstape-pc8e.h"
+#include "floppy-rx8e.h"
+#include "card-cr8f.h"
+#include "frontpanel-kc8m.h"
+#include "rtc-dk8e.h"
+#include "tty-kl8e.h"
+#include "mem-km8e.h"
 
 /************************************************************/
 /* Declarations of machine components not included in bus.h */

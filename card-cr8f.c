@@ -15,7 +15,7 @@
 #include "realtime.h"
 #include "bus.h"
 #include "utility.h"
-#include "kc8m.h"
+#include "frontpanel-kc8m.h"
 
 
 #define read_time ( 1 * millisecond)
