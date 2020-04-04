@@ -58,9 +58,7 @@ void clearflags(void)
 	kl8einit(); /* console TTY */
 	pc8einit(); /* paper tape reader punch */
 	cr8finit(); /* card reader */
-#ifdef RX8E
 	rx8einit(); /* diskette drive */
-#endif
 	link = 000000;
 	ac = 00000;
 	irq = 0;
@@ -121,9 +119,7 @@ void powerup(int argc, char** argv)
         kl8epower(); /* console TTY */
         pc8epower(); /* paper tape reader punch */
         cr8fpower(); /* card reader */
-#ifdef RX8E
-	rx8epower(); /* diskette drive */
-#endif
+		rx8epower(); /* diskette drive */
 
 	/* now, with all devices set up, mount devices, as needed */
 	if (corename[0] != '\0') { /* there is a core file */
@@ -588,11 +584,9 @@ int main(int argc, char **argv)
 				cr8fdev7(mb & 07);
 				break;
 
-#ifdef RX8E
 			case 075:
 				rx8edev(mb & 07);
 				break;
-#endif
 
 #ifdef TC08
 			case 076:
