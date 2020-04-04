@@ -175,9 +175,7 @@ static void console_event(void)
 	int loc = 0; /* current memory location (negative => special loc) */
 	char ch; /* input character */
 
-#ifdef KM8E
 	ttyoctal( ifr >> 12, 1, "" );
-#endif
 	ttyoctal( pc, 4, " (" );
 	ttyoctal( ac, 4, "\r\n" );
 	do {
@@ -245,22 +243,14 @@ static void console_event(void)
 			clearflags();
 			if (number >= 0) {
 				pc = number & 07777;
-#ifdef KM8E
 				ifr = number & 070000;
-#endif
 			} else {
 				pc = 0;
-#ifdef KM8E
 				ifr = 0;
-#endif
 			}
-#ifdef KM8E
 			ib = ifr;
 			dfr = ifr;
 			cpma = pc | ifr;
-#else
-			cpma = pc;
-#endif
 			ttyputs( "\r\n" );
 			run = 1;
 			break;
@@ -307,13 +297,11 @@ static void console_event(void)
 			ttyputs( help_message );
 			number = -1;
 			break;
-#ifdef DEBUG
 		case 'H':
 		case 'h':
 			ttyputs( "\r\n" );
 			output_debug();
 			break;
-#endif
 		default:
 			ttyputs( "?\r\n" );
 			number = -1;
