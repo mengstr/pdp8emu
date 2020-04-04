@@ -78,7 +78,7 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 	/* take over the interactive terminal */
 	{ /* get old TTY mode for restoration on exit */
 #ifdef TERMIOS
-		ioctl( keyboard, TCGETS, &oldstate );
+		tcgetattr(keyboard, &oldstate);
 #else
 		ioctl( keyboard, TIOCGETP, &oldstate );
 #endif
@@ -86,14 +86,13 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 	{ /* put TTY in RAW mode; note: raw mode may be a bit drastic! */
 #ifdef TERMIOS
 		struct termios newstate;
-		ioctl( keyboard, TCGETS, &newstate );
+		tcgetattr(keyboard, &newstate);
 		newstate.c_lflag &= ~ISIG;  /* don't enable signals */
 		newstate.c_lflag &= ~ICANON;/* don't do canonical input */
 		newstate.c_lflag &= ~ECHO;  /* don't echo */
 		newstate.c_iflag &= ~INLCR; /* don't convert nl to cr */
 		newstate.c_iflag &= ~IGNCR; /* don't ignore cr */
 		newstate.c_iflag &= ~ICRNL; /* don't convert cr to nl */
-		newstate.c_iflag &= ~IUCLC; /* don't map upper to lower */
 		newstate.c_iflag &= ~IXON;  /* don't enable ^S/^Q on output */
 		newstate.c_iflag &= ~IXOFF; /* don't enable ^S/^Q on input */
 		newstate.c_oflag &= ~OPOST; /* don't enable output processing */
@@ -103,7 +102,7 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 #endif
 		/* note:  on some UNIX systems, no amount of urging seems
 		   to make it insist on converting cr to nl */
-		ioctl( keyboard, TCSETS, &newstate );
+		tcsetattr(keyboard, TCSANOW, &newstate);
 #else
 		struct sgttyb newstate;
 		ioctl( keyboard, TIOCGETP, &newstate );
@@ -121,7 +120,8 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 void ttyrestore(void) /* return console to user */
 {
 #ifdef TERMIOS
-	ioctl( keyboard, TCSETS, &oldstate );
+	tcsetattr(keyboard, TCSANOW, &oldstate);
+
 #else
 	ioctl( keyboard, TIOCSETP, &oldstate );
 #endif
