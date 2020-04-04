@@ -208,11 +208,9 @@ int ttypoll(void) /* poll for a character from the console */
 
 int ttygetc(void) /* blocking 7 bit read from console */
 {
-	int count;
 	char buf;
 
 	if (stuffhead != stufftail) {
-		count = 1;
 		buf = stuffqueue[stuffhead];
 		stuffhead = (stuffhead + 1) % stufflen;
 	} else {
@@ -226,7 +224,7 @@ int ttygetc(void) /* blocking 7 bit read from console */
 #endif
 			mode = BLOCKING;
 		}
-		count = read( keyboard, &buf, 1 );
+		read( keyboard, &buf, 1 );
 	}
 
 	breakcount = 0;
