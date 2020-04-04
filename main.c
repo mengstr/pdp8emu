@@ -105,9 +105,6 @@ void clearflags(void)
 #endif
 	km8einit(); /* mmu */
 	dk8einit(); /* real-time clock */
-#ifdef KP8E
-	kp8einit(); /* power fail */
-#endif
 	kl8einit(); /* console TTY */
 	pc8einit(); /* paper tape reader punch */
 	cr8finit(); /* card reader */
@@ -166,9 +163,6 @@ void powerup(int argc, char** argv)
 #endif
 	km8epower(); /* mmu */
         dk8epower(); /* real-time clock */
-#ifdef KP8E
-	kp8epower(); /* power fail */
-#endif
         kl8epower(); /* console TTY */
         pc8epower(); /* paper tape reader punch */
         cr8fpower(); /* card reader */
