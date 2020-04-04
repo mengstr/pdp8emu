@@ -274,6 +274,7 @@ static void console_event(void)
 			ttyputs( "\r\n" );
 			powerdown();
 			/* the above never returns */
+			break;
 		case 'D':
 		case 'd': /* List Devices */
 			list_devices();
