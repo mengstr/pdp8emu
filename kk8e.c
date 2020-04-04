@@ -1031,7 +1031,7 @@ int main(int argc, char **argv)
 						} else { /* overflow */
 							/* --- mq = ?? --- */
 							ac = ac - mb;
-							/* shift ac-mq-link
+							/* shift ac-mq-link */
 							link = 010000;
 							/* --- shift ?? --- */
 						}
