@@ -76,8 +76,8 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 		newstate.c_iflag &= ~IXON;  /* don't enable ^S/^Q on output */
 		newstate.c_iflag &= ~IXOFF; /* don't enable ^S/^Q on input */
 		newstate.c_oflag &= ~OPOST; /* don't enable output processing */
-		newstate.c_cc[VMIN] = 0 ;
-		newstate.c_cc[VTIME] = 1 ;
+//		newstate.c_cc[VMIN] = 0 ;
+//		newstate.c_cc[VTIME] = 1 ;
 		/* note:  on some UNIX systems, no amount of urging seems
 		   to make it insist on converting cr to nl */
 		tcsetattr(keyboard, TCSANOW, &newstate);
@@ -108,7 +108,7 @@ void ttyputc(char ch) /* put character to console */
 
 #define BLOCKING 0
 #define NONBLOCK 1
-static int mode = BLOCKING; /* most recent tty read mode */
+static int mode = NONBLOCK; /* most recent tty read mode */
 
 static int breakcount = 0; /* count of consecutive ^C chars while polling */
 
@@ -180,9 +180,9 @@ int ttygetc(void) /* blocking 7 bit read from console */
 			int flag;
 			flag = fcntl( keyboard, F_GETFL, 0 );
 			fcntl( keyboard, F_SETFL, flag & ~O_NDELAY );
-			mode = BLOCKING;
+  			mode = BLOCKING;
 		}
-		ignore_value(read( keyboard, &buf, 1 ));
+		 ignore_value(read( keyboard, &buf, 1 ));
 	}
 
 	breakcount = 0;
