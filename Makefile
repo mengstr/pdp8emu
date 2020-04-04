@@ -86,7 +86,7 @@ EXTERN = -DKL8E -DPC8E -DCR8F -DRX8E
 # options from the above
 
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
-options = $(CPU) -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
+options = $(CPU) -Wall -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
 objects = $(cpu) $(console) $(intern) $(extern)
 libraries = $(conslib)
 
@@ -124,6 +124,11 @@ coredump: coredump.o utility.o
 # this makes a utility to load from RIM paper tape image into emulated core
 coremake: coremake.o utility.o
 	cc -o coremake coremake.o utility.o
+
+
+# Compile the code inside a docker container using this Makefile again
+docker:	
+	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make
 
 # make clean to delete the object files, saving disk space
 clean:
