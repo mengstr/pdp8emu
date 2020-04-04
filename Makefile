@@ -125,10 +125,13 @@ coredump: coredump.o utility.o
 coremake: coremake.o utility.o
 	cc -o coremake coremake.o utility.o
 
-
 # Compile the code inside a docker container using this Makefile again
 docker:	
-	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make
+	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make check
+
+# Run some checks to see if code works correctly
+check: pdp8emu
+	@echo "OK"
 
 # make clean to delete the object files, saving disk space
 clean:
