@@ -8,14 +8,17 @@
    Requires: utility.c -- the utility routines for the emulator.
 */
 
-/* First, declare that this is a main program */
-#define MAIN
-
 #include <stdio.h>
+#include <stdlib.h>
 #include "bus.h"
+#include "utility.h"
 
+char * progname; /* name of program itself (argv[0]) */
+char corename[NAME_LENGTH]; /* name of core image file, if any */
+int memory[MAXMEM];
+int run;
 
-dump()
+void dump(void)
 /* dump all of memory */
 {
 	int ma = 0;
@@ -44,13 +47,19 @@ dump()
 	} while (ma < MAXMEM);
 }
 
+void dump_devices(FILE *f)
+{
+}
+
+void mount_device(char * n, char * f)
+{
+}
+
 /* main program */
-main(argc, argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
 	getargs(argc, argv);
-        if (corename == NULL) { /* no file specified */
+        if (corename[0] == '\0') { /* no file specified */
 		fprintf( stderr, "%s: no core file specified\n", argv[0] );
 		exit(-1);
 	}

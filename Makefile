@@ -1,3 +1,7 @@
+
+all: clean pdp8emu coremake coredump
+
+
 #
 # KK8E with debug support -- the above hardware with an added trace package
 #
@@ -75,7 +79,7 @@ coredump: coredump.o utility.o
 	cc -o coredump coredump.o utility.o
 
 # this makes a utility to load from RIM paper tape image into emulated core
-coremake: coremake.o utility.o
+coremake: coremake.o utility.o 
 	cc -o coremake coremake.o utility.o
 
 # Compile the code inside a docker container using this Makefile again
