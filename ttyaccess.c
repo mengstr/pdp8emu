@@ -11,17 +11,20 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <termios.h>
 #include <signal.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <string.h>
 
 #define ignore_value(x) (__extension__ ({ __typeof__ (x) __x = (x); (void) __x; }))
 
 #define control(ch) (ch & 037)
 
-#define keyboard 0
-#define display 1
-
+static int sock;
 
 /*************/
 /* operation */
@@ -44,6 +47,32 @@
 */
 
 
+static int create_udp_socket(int port) 
+{
+	struct sockaddr_in server_address;
+	memset(&server_address, 0, sizeof(server_address));
+	server_address.sin_family = AF_INET;
+	server_address.sin_port = htons(port);
+	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
+		printf("could not create socket\n");
+		return 1;
+	}
+
+	struct timeval read_timeout;
+	read_timeout.tv_sec = 0;
+	read_timeout.tv_usec = 1;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
+	if ((bind(sock, (struct sockaddr *)&server_address,
+	          sizeof(server_address))) < 0) {
+		printf("could not bind socket\n");
+		return 1;
+	}
+	return 0;
+}
+
+
 /************************/
 /* startup and shutdown */
 /************************/
@@ -61,36 +90,40 @@ static void mykill(int arg)  /* called to kill process */
 void ttyraw(void) /* save tty state and convert to raw mode */
 {
 	/* take over the interactive terminal */
-	{ /* get old TTY mode for restoration on exit */
-		tcgetattr(keyboard, &oldstate);
-	}
-	{ /* put TTY in RAW mode; note: raw mode may be a bit drastic! */
-		struct termios newstate;
-		tcgetattr(keyboard, &newstate);
-		newstate.c_lflag &= ~ISIG;  /* don't enable signals */
-		newstate.c_lflag &= ~ICANON;/* don't do canonical input */
-		newstate.c_lflag &= ~ECHO;  /* don't echo */
-		newstate.c_iflag &= ~INLCR; /* don't convert nl to cr */
-		newstate.c_iflag &= ~IGNCR; /* don't ignore cr */
-		newstate.c_iflag &= ~ICRNL; /* don't convert cr to nl */
-		newstate.c_iflag &= ~IXON;  /* don't enable ^S/^Q on output */
-		newstate.c_iflag &= ~IXOFF; /* don't enable ^S/^Q on input */
-		newstate.c_oflag &= ~OPOST; /* don't enable output processing */
-//		newstate.c_cc[VMIN] = 0 ;
-//		newstate.c_cc[VTIME] = 1 ;
-		/* note:  on some UNIX systems, no amount of urging seems
-		   to make it insist on converting cr to nl */
-		tcsetattr(keyboard, TCSANOW, &newstate);
-	}
-	{ /* install handlers to catch attempts to kill process */
-		/* should probably catch other fatal signals too */
-		signal( SIGTERM, mykill );
-	}
+	/* get old TTY mode for restoration on exit */
+	tcgetattr(STDIN_FILENO, &oldstate);
+	
+	/* put TTY in RAW mode; note: raw mode may be a bit drastic! */
+	struct termios newstate;
+	tcgetattr(STDIN_FILENO, &newstate);
+	newstate.c_lflag &= ~ISIG;  /* don't enable signals */
+	newstate.c_lflag &= ~ICANON;/* don't do canonical input */
+	newstate.c_lflag &= ~ECHO;  /* don't echo */
+	newstate.c_iflag &= ~INLCR; /* don't convert nl to cr */
+	newstate.c_iflag &= ~IGNCR; /* don't ignore cr */
+	newstate.c_iflag &= ~ICRNL; /* don't convert cr to nl */
+	newstate.c_iflag &= ~IXON;  /* don't enable ^S/^Q on output */
+	newstate.c_iflag &= ~IXOFF; /* don't enable ^S/^Q on input */
+	newstate.c_oflag &= ~OPOST; /* don't enable output processing */
+	newstate.c_cc[VMIN] = 0 ;
+	newstate.c_cc[VTIME] = 1 ;
+	tcsetattr(STDIN_FILENO, TCSANOW, &newstate);
+
+	/* install handlers to catch attempts to kill process */
+	signal( SIGTERM, mykill );
+
+	/* Set keyboard to nonblocking */
+	int flag;
+	flag = fcntl( STDIN_FILENO, F_GETFL, 0 );
+	fcntl( STDIN_FILENO, F_SETFL, flag | O_NDELAY );
+
+	/* Create the UDP socket listening at port 2288 */
+	create_udp_socket(2288);
 }
 
 void ttyrestore(void) /* return console to user */
 {
-	tcsetattr(keyboard, TCSANOW, &oldstate);
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldstate);
 }
 
 
@@ -103,17 +136,14 @@ void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
 void ttyputc(char ch) /* put character to console */
 {
 	char buf = ch;
-	ignore_value(write( display, &buf, 1 ));
+	ignore_value(write( STDOUT_FILENO, &buf, 1 ));
 }
 
-#define BLOCKING 0
-#define NONBLOCK 1
-static int mode = NONBLOCK; /* most recent tty read mode */
 
 static int breakcount = 0; /* count of consecutive ^C chars while polling */
 
 /* following definitions are for auxiliary path into TTY input stream */
-#define stufflen 16
+#define stufflen 1024
 static int stuffhead = 0; /* head pointer for stuffing queue */
 static int stufftail = 0; /* tail pointer for stuffing queue */
 static char stuffqueue[stufflen];
@@ -127,10 +157,30 @@ void ttystuff(char ch) /* stuff a char into input stream from auxiliary source *
 	}
 }
 
+static void poll_udp()  /* poll for characters coming in at the UDP socket */
+{
+	struct sockaddr_in client_address;
+	socklen_t client_address_len = 0;
+	int len;
+	int i;
+
+	char buffer[256];
+	len = recvfrom(sock, buffer, sizeof(buffer), 0,
+				(struct sockaddr *)&client_address,
+				&client_address_len);
+
+	for (i=0; i<len; i++) {
+		ttystuff(buffer[i]);
+	}
+}
+
+
 int ttypoll(void) /* poll for a character from the console */
 {
 	int count;
 	char buf;
+	
+	poll_udp();
 
 	/* try to fill input buffer with one char */
 	if (stuffhead != stufftail) {
@@ -138,14 +188,7 @@ int ttypoll(void) /* poll for a character from the console */
 		buf = stuffqueue[stuffhead];
 		stuffhead = (stuffhead + 1) % stufflen;
 	} else {
-		if (mode == BLOCKING) { /* make nonblocking */
-			int flag;
-			flag = fcntl( keyboard, F_GETFL, 0 );
-			fcntl( keyboard, F_SETFL, flag | O_NDELAY );
-			mode = NONBLOCK;
-		}
-
-		count = read( keyboard, &buf, 1 );
+		count = read(STDIN_FILENO, &buf, 1 );
 	}
 
 	if (count <= 0) {
@@ -171,18 +214,19 @@ int ttypoll(void) /* poll for a character from the console */
 int ttygetc(void) /* blocking 7 bit read from console */
 {
 	char buf;
+	int len;
 
-	if (stuffhead != stufftail) {
-		buf = stuffqueue[stuffhead];
-		stuffhead = (stuffhead + 1) % stufflen;
-	} else {
-		if (mode != BLOCKING) { /* make blocking */
-			int flag;
-			flag = fcntl( keyboard, F_GETFL, 0 );
-			fcntl( keyboard, F_SETFL, flag & ~O_NDELAY );
-  			mode = BLOCKING;
+	for (;;) {
+		poll_udp();
+
+		if (stuffhead != stufftail) {
+			buf = stuffqueue[stuffhead];
+			stuffhead = (stuffhead + 1) % stufflen;
+			break;
+		} else {
+			len=read(STDIN_FILENO, &buf, 1 );
+			if (len>0) break;
 		}
-		 ignore_value(read( keyboard, &buf, 1 ));
 	}
 
 	breakcount = 0;
@@ -193,8 +237,8 @@ void ttyputs(char * buf) /* put string to console */
 {
 	int count;
 	for (count = 0; buf[count] != '\0'; count++) {;};
-	count = write( display, buf, count );
-	fsync( display );
+	count = write(STDOUT_FILENO, buf, count );
+	fsync( STDOUT_FILENO );
 }
 
 void ttygets(char * buf, int len) /* get string from console */

@@ -84,11 +84,11 @@ coremake: coremake.o utility.o
 
 # Compile the code inside a docker container using this Makefile again
 docker:	
-	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make check
+	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make
 
 # Run some checks to see if code works correctly
 check: pdp8emu coremake
-	./coremake CORE < tests/chkmoo.rim
+	./coremake CORE < tests/focal-8.rim
 	./pdp8emu CORE 2>CORE.tmp
 
 # make clean to delete the object files, saving disk space
