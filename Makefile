@@ -64,11 +64,11 @@ libraries = $(conslib)
 # Note that, since this makefile contains the option settings,
 # it references itself!
 
-pdp8emu: $(objects) realtime.o ttyaccess.o utility.o
+pdp8emu: $(objects) realtime.o ttyaccess.o utility.o disasm.o
 	cc --version
-	cc -o pdp8emu $(objects) realtime.o ttyaccess.o utility.o $(libraries)
+	cc -o pdp8emu $(objects) realtime.o ttyaccess.o utility.o disasm.o $(libraries)
 
-$(objects) utility.o: bus.h realtime.h Makefile
+$(objects) utility.o: bus.h realtime.h disasm.h Makefile
 
 ##########################################################################
 #
@@ -87,9 +87,10 @@ docker:
 	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make check
 
 # Run some checks to see if code works correctly
-check: pdp8emu
-	@echo "OK"
+check: pdp8emu coremake
+	./coremake CORE < tests/chkmoo.rim
+	./pdp8emu CORE 2>CORE.tmp
 
 # make clean to delete the object files, saving disk space
 clean:
-	rm -f pdp8emu *.o *.bak *~
+	rm -f pdp8emu *.o *.bak *.tmp *~

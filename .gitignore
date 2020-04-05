@@ -10,4 +10,7 @@
 a.out
 *.o
 pdp8e
+coredump
+coremake
+CORE
 

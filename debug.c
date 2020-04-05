@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "bus.h"
 #include "ttyaccess.h"
+#include "disasm.h"
 
 /***********************************/
 /* instruction frequency histogram */
@@ -40,8 +41,23 @@ void reset_debug(void) /* power-on initialize */
 
 void accumulate_debug(int p, int m)
 {
+	static int prevp[2];
+	static long int cnt=0;
+
 	instructions[m]++;
 	locations[p]++;
+
+	if (p==prevp[0] || p==prevp[1]) {
+		cnt++;
+	} else {
+			if (cnt>0) {
+				fprintf(stderr,"      [ %ld repeated instructions removed ]\r\n",cnt);
+				cnt=0;
+			}
+			fprintf(stderr,"%05o %04o  %s\r\n",p,m,ops[m]);
+			prevp[0]=prevp[1];
+			prevp[1]=p;
+	}
 }
 
 
