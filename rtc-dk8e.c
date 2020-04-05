@@ -82,7 +82,7 @@ void dk8epower(void) /* power-on initialize */
 void dk8einit(void) /* console reset */
 {
 	tick_flag = 0;
-	interrupt_enable = 1;
+	interrupt_enable = 0; /* RTC inerrupts should be disabled at reset */
 	/* assume that cpu clears irq for us */
 }
 
