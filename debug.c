@@ -39,7 +39,7 @@ void reset_debug(void) /* power-on initialize */
 /* Accumulate histogram */
 /************************/
 
-void accumulate_debug(int p, int m)
+void accumulate_debug(int p, int m, int ac, int link, int irq)
 {
 	static int prevp[2];
 	static long int cnt=0;
@@ -54,9 +54,10 @@ void accumulate_debug(int p, int m)
 				fprintf(stderr,"      [ %ld repeated instructions removed ]\r\n",cnt);
 				cnt=0;
 			}
-			fprintf(stderr,"%05o %04o  %s\r\n",p,m,ops[m]);
+			fprintf(stderr,"%o.%04o (%d) %05o:%04o  %s\r\n",(link?1:0),ac,irq,p,m,ops[m]);
 			prevp[0]=prevp[1];
 			prevp[1]=p;
+			fflush(stderr);
 	}
 }
 

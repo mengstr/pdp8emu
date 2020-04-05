@@ -1,6 +1,5 @@
 
-all: clean pdp8emu coremake coredump
-
+all: clean pdp8emu coremakerim coremakebin coredump
 
 #
 # KK8E with debug support -- the above hardware with an added trace package
@@ -79,8 +78,12 @@ coredump: coredump.o utility.o
 	cc -o coredump coredump.o utility.o
 
 # this makes a utility to load from RIM paper tape image into emulated core
-coremake: coremake.o utility.o 
-	cc -o coremake coremake.o utility.o
+coremakerim: coremakerim.o utility.o 
+	cc -o coremakerim coremakerim.o utility.o
+
+# this makes a utility to load from BIN paper tape image into emulated core
+coremakebin: coremakebin.o utility.o 
+	cc -o coremakebin coremakebin.o utility.o
 
 # Compile the code inside a docker container using this Makefile again
 docker:	
@@ -93,4 +96,4 @@ check: pdp8emu coremake
 
 # make clean to delete the object files, saving disk space
 clean:
-	rm -f pdp8emu *.o *.bak *.tmp *~
+	rm -f pdp8emu *.o *.bak *.tmp CORE.tmp.* *~

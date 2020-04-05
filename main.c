@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 
 		/* the actual instruction fetch is here */
 		mb = memory[cpma];
-		accumulate_debug(cpma,mb);
+		accumulate_debug(cpma,mb,ac,link,irq);
 		countdown -= shortcycle;
 
 		switch (mb >> 7) { /* note that we decode i and z here */
