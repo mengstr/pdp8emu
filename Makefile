@@ -93,30 +93,30 @@ docker:
 check: pdp8emu coremakebin coremakerim
 	./coremakebin CORE1 < tests/D0AB-InstTest-1.pt
 	./pdp8emu CORE1 2>CORE1.tmp &
+	@sleep 1 
+	@printf "5314/" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "5314/" > /dev/udp/127.0.0.1/2288
+	@printf "7402\n" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "7402\n" > /dev/udp/127.0.0.1/2288
+	@printf "S" 		| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "S" > /dev/udp/127.0.0.1/2288
+	@printf "7777\n" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "7777\n" > /dev/udp/127.0.0.1/2288
-	@sleep 1
-	@printf "0200G" > /dev/udp/127.0.0.1/2288
-	@sleep 2
-	@printf "C" > /dev/udp/127.0.0.1/2288
-	@sleep 20
-	@printf "Q" > /dev/udp/127.0.0.1/2288
+	@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+	@sleep 3
+	@printf "C" 		| nc -w 1 -u 127.0.0.1 2288
+	@sleep 30
+	@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
 	./coremakebin CORE2 < tests/D0BB-InstTest-2.pt
 	./pdp8emu CORE2 2>CORE2.tmp &
 	@sleep 1
-	@printf "3745/" > /dev/udp/127.0.0.1/2288
+	@printf "3745/" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "7402\n" > /dev/udp/127.0.0.1/2288
+	@printf "7402\n" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 1
-	@printf "0200G" > /dev/udp/127.0.0.1/2288
+	@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
 	@sleep 30
-	@printf "Q" > /dev/udp/127.0.0.1/2288
+	@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
 
 # make clean to delete the object files, saving disk space
 clean:
