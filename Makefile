@@ -90,10 +90,34 @@ docker:
 	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make
 
 # Run some checks to see if code works correctly
-check: pdp8emu coremake
-	./coremake CORE < tests/focal-8.rim
-	./pdp8emu CORE 2>CORE.tmp
+check: pdp8emu coremakebin coremakerim
+	./coremakebin CORE1 < tests/D0AB-InstTest-1.pt
+	./pdp8emu CORE1 2>CORE1.tmp &
+	@sleep 1
+	@printf "5314/" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "7402\n" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "S" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "7777\n" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "0200G" > /dev/udp/127.0.0.1/2288
+	@sleep 2
+	@printf "C" > /dev/udp/127.0.0.1/2288
+	@sleep 20
+	@printf "Q" > /dev/udp/127.0.0.1/2288
+	./coremakebin CORE2 < tests/D0BB-InstTest-2.pt
+	./pdp8emu CORE2 2>CORE2.tmp &
+	@sleep 1
+	@printf "3745/" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "7402\n" > /dev/udp/127.0.0.1/2288
+	@sleep 1
+	@printf "0200G" > /dev/udp/127.0.0.1/2288
+	@sleep 30
+	@printf "Q" > /dev/udp/127.0.0.1/2288
 
 # make clean to delete the object files, saving disk space
 clean:
-	rm -f pdp8emu *.o *.bak *.tmp CORE.tmp.* *~
+	rm -f pdp8emu coremakerim coremakebin coredump *.o *.bak *.tmp CORE* *~

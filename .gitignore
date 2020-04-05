@@ -11,6 +11,7 @@ a.out
 *.o
 pdp8e
 coredump
-coremake
+coremakebin
+coremakerim
 CORE
 
