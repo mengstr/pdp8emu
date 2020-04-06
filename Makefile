@@ -89,7 +89,8 @@ coremakebin: coremakebin.o utility.o
 docker:	
 	docker run --rm -v "$(PWD)":/usr/src/myapp -w /usr/src/myapp gcc:latest make
 
-# Run some checks to see if code works correctly
+
+# Run some MAINDEC diags to see if it works correctly
 check: pdp8emu coremakebin coremakerim
 	./coremakebin CORE-D0AB < tests/D0AB-InstTest-1.pt
 	./pdp8emu CORE-D0AB 2>CORE-D0AB.2.tmp | tee CORE-D0AB.1.tmp&
@@ -100,9 +101,10 @@ check: pdp8emu coremakebin coremakerim
 		@printf "7777\n" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "C" 		| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao '1' CORE-D0AB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0BB < tests/D0BB-InstTest-2.pt
 	./pdp8emu CORE-D0BB 2>CORE-D0BB.2.tmp | tee CORE-D0BB.1.tmp & 
@@ -110,41 +112,46 @@ check: pdp8emu coremakebin coremakerim
 		@printf "3751/" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0262\n" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao '2' CORE-D0BB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0CC < tests/D0CC-AddTest.pt
 	./pdp8emu CORE-D0CC 2>CORE-D0CC.2.tmp | tee CORE-D0CC.1.tmp &
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 30
+		@sleep 320
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'RANDOM' CORE-D0CC.1.tmp | wc -l)" -lt "1" ]; then false; fi
 
 	./coremakebin CORE-D0DB < tests/D0DB-RandomAND.pt
 	./pdp8emu CORE-D0DB 2>CORE-D0DB.2.tmp | tee CORE-D0DB.1.tmp &
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'A' CORE-D0DB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0EB < tests/D0EB-Random-TAD.pt
 	./pdp8emu CORE-D0EB 2>CORE-D0EB.2.tmp | tee CORE-D0EB.1.tmp &
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'T' CORE-D0EB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0FC < tests/D0FC-Random-ISZ.pt
 	./pdp8emu CORE-D0FC 2>CORE-D0FC.2.tmp | tee CORE-D0FC.1.tmp&
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'FC' CORE-D0FC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0GC < tests/D0GC-Random-DCA.pt
 	./pdp8emu CORE-D0GC 2>CORE-D0GC.2.tmp | tee CORE-D0GC.1.tmp &
@@ -152,17 +159,19 @@ check: pdp8emu coremakebin coremakerim
 		@printf "0013/" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0307\n" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'G' CORE-D0GC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0HC < tests/D0HC-Random-JMP.pt
 	./pdp8emu CORE-D0HC 2>CORE-D0HC.2.tmp | tee CORE-D0HC.1.tmp&
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'HC' CORE-D0HC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0IB < tests/D0IB-JMPJMS.pt
 	./pdp8emu CORE-D0IB 2>CORE-D0IB.2.tmp | tee CORE-D0IB.1.tmp &
@@ -170,17 +179,19 @@ check: pdp8emu coremakebin coremakerim
 		@printf "3567/" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0311\n" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'I' CORE-D0IB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 	./coremakebin CORE-D0JB < tests/D0JB-JMPJMS-RANDOM.pt
 	./pdp8emu CORE-D0JB 2>CORE-D0JB.2.tmp | tee CORE-D0JB.1.tmp &
 		@sleep 1
 		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-		@sleep 10
+		@sleep 20
 		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
 		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+		if [ "$$(grep -ao 'JB' CORE-D0JB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
 
 # make clean to delete the object files
