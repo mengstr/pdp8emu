@@ -3,6 +3,7 @@
    Modified by: Sander van Malssen, svm@kozmix.hacktic.nl.
 	added fixes so it uses termios.h rather than sgtty.h
    Date: Aug. 15, 1995
+   Updates: Mats Engstrom, April 2020
    Language: C (UNIX)
    Purpose: Code to take over the tty and put it in raw mode
 */

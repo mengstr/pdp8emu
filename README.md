@@ -43,7 +43,7 @@ tests/            - PDP-8 tape images to run for testing
 Makefile          - Used by make, contains the emulator configuration
 README.md         - This file
 
-main.c		      - CPU
+main.c            - CPU
 mem-km8e.c        - Memory manager
 tty-kl8e.c        - Console interface
 frontpanel-kc8m.c - Front panel (minimal function, dumb terminal)

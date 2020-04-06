@@ -1,6 +1,7 @@
 /* File: bus.h
    Author: Douglas Jones, Dept. of Comp. Sci., U. of Iowa, Iowa City, IA 52242.
    Date: July 26, 1995
+   Updates: Mats Engstrom, April 2020
    Language: C (UNIX)
    Purpose: Declarations of bus lines shared by PDP8/E and peripherals.
             This is not, strictly speaking, either an omnibus or a positive

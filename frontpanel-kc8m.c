@@ -1,6 +1,7 @@
 /* File: kc8m.c
    Author: Douglas Jones, Dept. of Comp. Sci., U. of Iowa, Iowa City, IA 52242.
    Date: Feb. 29, 1996
+   Updates: Mats Engstrom, April 2020
    Language: C (UNIX)
    Purpose: DEC PC8/M (blank and ugly tty based) control panel emulator.
 

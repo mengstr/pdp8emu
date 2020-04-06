@@ -1,3 +1,9 @@
+/* File: disasm.c
+   Author: Mats Engstrom, April 2020
+   Language: C (UNIX)
+   Purpose: PDP-8 emulator debugging tool
+
+*/
 
 char *ops[4096] = {
 	"AND 0000   ;AND operand with AC, ZP 0000", // op 0000

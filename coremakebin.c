@@ -1,4 +1,5 @@
 /* File: coremakebin.c
+   Updates: Mats Engstrom, April 2020
    Author: Douglas Jones, Dept. of Comp. Sci., U. of Iowa, Iowa City, IA 52242.
    Date: July 28, 1995
    Language: C (UNIX)

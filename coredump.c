@@ -1,6 +1,7 @@
 /* File: coredump.c
    Author: Douglas Jones, Dept. of Comp. Sci., U. of Iowa, Iowa City, IA 52242.
    Date: July 26, 1995
+   Updates: Mats Engstrom, April 2020
    Language: C (UNIX)
    Purpose: DEC PDP-8/e emulator core file inspection program.
    Operation: read a core image file as specified on the command line and
