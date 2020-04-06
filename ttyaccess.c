@@ -125,6 +125,7 @@ void ttyraw(void) /* save tty state and convert to raw mode */
 void ttyrestore(void) /* return console to user */
 {
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldstate);
+	close(sock);
 }
 
 

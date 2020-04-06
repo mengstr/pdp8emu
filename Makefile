@@ -91,33 +91,98 @@ docker:
 
 # Run some checks to see if code works correctly
 check: pdp8emu coremakebin coremakerim
-	./coremakebin CORE1 < tests/D0AB-InstTest-1.pt
-	./pdp8emu CORE1 2>CORE1.tmp &
-	@sleep 1 
-	@printf "5314/" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "7402\n" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "S" 		| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "7777\n" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 3
-	@printf "C" 		| nc -w 1 -u 127.0.0.1 2288
-	@sleep 30
-	@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
-	./coremakebin CORE2 < tests/D0BB-InstTest-2.pt
-	./pdp8emu CORE2 2>CORE2.tmp &
-	@sleep 1
-	@printf "3745/" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "7402\n" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 1
-	@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
-	@sleep 30
-	@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+	./coremakebin CORE-D0AB < tests/D0AB-InstTest-1.pt
+	./pdp8emu CORE-D0AB 2>CORE-D0AB.2.tmp | tee CORE-D0AB.1.tmp&
+		@sleep 1
+		@printf "0120/" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0261\n" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "S" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "7777\n" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "C" 		| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
 
-# make clean to delete the object files, saving disk space
+	./coremakebin CORE-D0BB < tests/D0BB-InstTest-2.pt
+	./pdp8emu CORE-D0BB 2>CORE-D0BB.2.tmp | tee CORE-D0BB.1.tmp & 
+		@sleep 1
+		@printf "3751/" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0262\n" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0CC < tests/D0CC-AddTest.pt
+	./pdp8emu CORE-D0CC 2>CORE-D0CC.2.tmp | tee CORE-D0CC.1.tmp &
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 30
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0DB < tests/D0DB-RandomAND.pt
+	./pdp8emu CORE-D0DB 2>CORE-D0DB.2.tmp | tee CORE-D0DB.1.tmp &
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0EB < tests/D0EB-Random-TAD.pt
+	./pdp8emu CORE-D0EB 2>CORE-D0EB.2.tmp | tee CORE-D0EB.1.tmp &
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0FC < tests/D0FC-Random-ISZ.pt
+	./pdp8emu CORE-D0FC 2>CORE-D0FC.2.tmp | tee CORE-D0FC.1.tmp&
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0GC < tests/D0GC-Random-DCA.pt
+	./pdp8emu CORE-D0GC 2>CORE-D0GC.2.tmp | tee CORE-D0GC.1.tmp &
+		@sleep 1
+		@printf "0013/" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0307\n" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0HC < tests/D0HC-Random-JMP.pt
+	./pdp8emu CORE-D0HC 2>CORE-D0HC.2.tmp | tee CORE-D0HC.1.tmp&
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0IB < tests/D0IB-JMPJMS.pt
+	./pdp8emu CORE-D0IB 2>CORE-D0IB.2.tmp | tee CORE-D0IB.1.tmp &
+		@sleep 1
+		@printf "3567/" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0311\n" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+	./coremakebin CORE-D0JB < tests/D0JB-JMPJMS-RANDOM.pt
+	./pdp8emu CORE-D0JB 2>CORE-D0JB.2.tmp | tee CORE-D0JB.1.tmp &
+		@sleep 1
+		@printf "0200G" 	| nc -w 1 -u 127.0.0.1 2288
+		@sleep 10
+		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
+		@printf "Q" 		| nc -w 1 -u 127.0.0.1 2288
+
+
+# make clean to delete the object files
 clean:
 	rm -f pdp8emu coremakerim coremakebin coredump *.o *.bak *.tmp CORE* *~
