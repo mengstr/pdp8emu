@@ -188,7 +188,7 @@ void dumpcore(void)
 		while (memory[max] == 0) { /* avoid output of unused fields */
 			max--;
 		}
-		for (a = 0; a < max; a++) { /* dump nonzero memory */
+		for (a = 0; a <= max; a++) { /* dump nonzero memory */
 			putc( (memory[a] >> 6) + '!', f );
 			putc( (memory[a] & 077) + '!', f );
 			d++;
