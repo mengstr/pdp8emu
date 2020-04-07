@@ -165,6 +165,8 @@ PDP-8/E emulator, commands are:\r\n\
  <cr> = close unchanged     nnnn<cr> = store N in open location, then close\r\n\
  the value in a location is printed when that location is opened.\r\n\
 \n\
+ R = reset/clear\r\n\
+\n\
  D = list all devices\r\n\
  M = mount file on device\r\n\
  to dismount file, mount nothing on the device\r\n\
@@ -267,6 +269,11 @@ static void console_event(void)
 		case 'c': /* Continue */
 			ttyputs( "\r\n" );
 			run = 1;
+			break;
+		case 'R':
+		case 'r':
+			ttyputs( "\r\nFlags and registers cleared\r\n" );
+			clearflags();
 			break;
 		case 'Q':
 		case 'q': /* Quit */
