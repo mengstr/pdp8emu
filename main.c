@@ -98,9 +98,7 @@ void clearflags(void)
 	/* device specific effects of the reset operation */
 	kc8init(); /* front panel */
 	reset_debug();
-#ifdef KE8E
-	ke8einit(); /* eae */
-#endif
+// KE8E	ke8einit(); /* eae */
 	km8einit(); /* mmu */
 	dk8einit(); /* real-time clock */
 	kl8einit(); /* console TTY */
@@ -156,15 +154,13 @@ void powerup(int argc, char** argv)
                          corename );
 
 	kc8power( argc, argv ); /* console */
-#ifdef KE8E
-	ke8epower(); /* eae */
-#endif
+// KE8E	ke8epower(); /* eae */
 	km8epower(); /* mmu */
-        dk8epower(); /* real-time clock */
-        kl8epower(); /* console TTY */
-        pc8epower(); /* paper tape reader punch */
-        cr8fpower(); /* card reader */
-		rx8epower(); /* diskette drive */
+	dk8epower(); /* real-time clock */
+	kl8epower(); /* console TTY */
+	pc8epower(); /* paper tape reader punch */
+	cr8fpower(); /* card reader */
+	rx8epower(); /* diskette drive */
 
 	/* now, with all devices set up, mount devices, as needed */
 	if (corename[0] != '\0') { /* there is a core file */
@@ -557,9 +553,7 @@ int main(int argc, char **argv)
 					break;
 				case 04: /* GTF */
 					ac = (link >> 1)       /* bit 0 */
-#ifdef KE8E
-					   | (gt?)	       /* bit 1 */
-#endif
+// KE8E				   | (gt?)	       /* bit 1 KE8E */
 					   | ((irq > 0) << 9)  /* bit 2 */
 					   | (0)	/*?*/  /* bit 3 */
 					   | (enab << 7)       /* bit 4 */
@@ -568,9 +562,7 @@ int main(int argc, char **argv)
 					break;
 				case 05: /* RTF */
 					link = (ac<<1)& 010000; /* bit 0 */
-#ifdef KE8E
-					gt = ?			/* bit 1 */
-#endif
+// KE8E				gt = ?			/* bit 1 KE8E */
 					/* nothing */		/* bit 2 */
 					/* nothing */		/* bit 3 */
 					enab = 1;		/* bit 4 */
@@ -581,11 +573,9 @@ int main(int argc, char **argv)
 					enab_rtf = 0;
 					break;
 				case 06: /* SGT */
-#ifdef KE8E
-					if (?) {
-						pc = (pc + 1) & 07777;
-					}
-#endif
+// KE8E				if (?) {
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E				}
 					break;
 				case 07: /* CAF */
 					clearflags();
@@ -914,181 +904,179 @@ int main(int argc, char **argv)
 					mq = ac;
 					ac = temp;
 				}
-#ifdef KE8E
-				if (EAEmode == 0) { /* mode A */
-					if (mb & 00040) { /* mode A SCA */
-						ac |= sc;
-					}
-					switch ((mb & 00016) >> 1) {
-					case 00: /* NOP */
-						break;
-					case 01: /* SCL */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						sc = (~mb) & 00037;
-						break;
-					case 02: /* MUY */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						{
-							long int prod = mp * mb;
-							mq = prod & 07777;
-							ac = (prod>>12) & 07777;
-							link = 000000;
-						}
-						sc = 013;
-						break;
-					case 03: /* DVI */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						if (ac < mb) { /* no overflow */
-							long int idend;
-							idend = (ac << 12) | mq;
-							mq = idend / mb;
-							ac = idend % mb;
-							link = 000000;
-						} else { /* overflow */
-							/* --- mq = ?? --- */
-							ac = ac - mb;
-							/* shift ac-mq-link */
-							link = 010000;
-							/* --- shift ?? --- */
-						}
-						sc = 014;
-						break;
-					case 04: /* NMI or SWAB */
-						if ((mb & 00060) == 020) {
-						    /* SWAB */
-						    EAEmode = 1
-						} else {
-						    /* NMI */
-						    long int shift, news;
-						    shift = (link | ac)<<12;
-						    shift |= mq;
-						    sc = 0;
-						    do (;;) {
-							news = shift << 1;
-						        if(!(news & 027777777))
-							    break;
-							if ( (news^shift)
-							   & 040000000 ) break;
-							shift = news;
-							sc ++;
-						    }
-						    mq = shift & 07777;
-						    shift >>= 12;
-						    ac = shift & 07777;
-						    link = shift & 010000;
-						}
-						break;
-					case 05: /* SHL */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						sc = (~mb) & 00037;
-						}
-						    long int shift;
-						    shift = (link | ac)<<12;
-						    shift |= mq;
-						    do (;;) {
-							shift <<= 1;
-							sc ++;sc &= 037;
-							if (sc == 0) break;
-						    }
-						    mq = shift & 07777;
-						    shift >>= 12;
-						    ac = shift & 07777;
-						    link = shift & 010000;
-						}
-						break;
-					case 06: /* ASR */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						sc = (~mb) & 00037;
-						}
-						    long int shift;
-						    shift = (ac<<12)|mq;
-						    link = (ac<<1)&010000;
-						    do (;;) {
-							shift=(link|shift)>>1;
-							sc ++;sc &= 037;
-							if (sc == 0) break;
-						    }
-						    mq = shift & 07777;
-						    shift >>= 12;
-						    ac = shift & 07777;
-						}
-						break;
-					case 07: /* LSR */
-						cpma = pc | ifr;
-						mb = memory[cpma];
-						pc = (pc + 1) & 07777;
-						sc = (~mb) & 00037;
-						}
-						    long int shift;
-						    shift = (ac<<12)|mq;
-						    do (;;) {
-							shift >>= 1;
-							sc ++;sc &= 037;
-							if (sc == 0) break;
-						    }
-						    mq = shift & 07777;
-						    shift >>= 12;
-						    ac = shift & 07777;
-						    link = 0;
-						}
-						break;
-					}
-				} else { /* mode B */
-				    if ((mb & 00040) == 0) { /* CLASS 1 */
-					switch ((mb & 00016) >> 1) {
-					case 00: /* NOP */
-						break;
-					case 01: /* ACS */
-						sc = ac & 037;
-						break;
-					case 02: /* */
-						break;
-					case 03: /* */
-						break;
-					case 04: /* */
-						break;
-					case 05: /* SAM */
-						ac = mq - ac;
-						break;
-					case 06: /* */
-						break;
-					case 07: /* */
-						break;
-					}
-				    } else { /* CLASS 2 */
-					switch ((mb & 00016) >> 1) {
-					case 00: /* SCA */
-						ac = ac | sc;
-						break;
-					case 01: /* */
-						break;
-					case 02: /* */
-						break;
-					case 03: /* */
-						break;
-					case 04: /* */
-						break;
-					case 05: /* */
-						break;
-					case 06: /* */
-						break;
-					case 07: /* */
-						break;
-					}
-				    }
-				}
-#endif
-			}
-		}
-	}
-}
+// KE8E			if (EAEmode == 0) { /* mode A */
+// KE8E				if (mb & 00040) { /* mode A SCA */
+// KE8E					ac |= sc;
+// KE8E				}
+// KE8E				switch ((mb & 00016) >> 1) {
+// KE8E				case 00: /* NOP */
+// KE8E					break;
+// KE8E				case 01: /* SCL */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					sc = (~mb) & 00037;
+// KE8E					break;
+// KE8E				case 02: /* MUY */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					{
+// KE8E						long int prod = mp * mb;
+// KE8E						mq = prod & 07777;
+// KE8E						ac = (prod>>12) & 07777;
+// KE8E						link = 000000;
+// KE8E					}
+// KE8E					sc = 013;
+// KE8E					break;
+// KE8E				case 03: /* DVI */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					if (ac < mb) { /* no overflow */
+// KE8E						long int idend;
+// KE8E						idend = (ac << 12) | mq;
+// KE8E						mq = idend / mb;
+// KE8E						ac = idend % mb;
+// KE8E						link = 000000;
+// KE8E					} else { /* overflow */
+// KE8E						/* --- mq = ?? --- */
+// KE8E						ac = ac - mb;
+// KE8E						/* shift ac-mq-link */
+// KE8E						link = 010000;
+// KE8E						/* --- shift ?? --- */
+// KE8E					}
+// KE8E					sc = 014;
+// KE8E					break;
+// KE8E				case 04: /* NMI or SWAB */
+// KE8E					if ((mb & 00060) == 020) {
+// KE8E					    /* SWAB */
+// KE8E					    EAEmode = 1
+// KE8E					} else {
+// KE8E					    /* NMI */
+// KE8E					    long int shift, news;
+// KE8E					    shift = (link | ac)<<12;
+// KE8E					    shift |= mq;
+// KE8E					    sc = 0;
+// KE8E					    do (;;) {
+// KE8E						news = shift << 1;
+// KE8E					        if(!(news & 027777777))
+// KE8E						    break;
+// KE8E						if ( (news^shift)
+// KE8E						   & 040000000 ) break;
+// KE8E						shift = news;
+// KE8E						sc ++;
+// KE8E					    }
+// KE8E					    mq = shift & 07777;
+// KE8E					    shift >>= 12;
+// KE8E					    ac = shift & 07777;
+// KE8E					    link = shift & 010000;
+// KE8E					}
+// KE8E					break;
+// KE8E				case 05: /* SHL */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					sc = (~mb) & 00037;
+// KE8E					}
+// KE8E					    long int shift;
+// KE8E					    shift = (link | ac)<<12;
+// KE8E					    shift |= mq;
+// KE8E					    do (;;) {
+// KE8E						shift <<= 1;
+// KE8E						sc ++;sc &= 037;
+// KE8E						if (sc == 0) break;
+// KE8E					    }
+// KE8E					    mq = shift & 07777;
+// KE8E					    shift >>= 12;
+// KE8E					    ac = shift & 07777;
+// KE8E					    link = shift & 010000;
+// KE8E					}
+// KE8E					break;
+// KE8E				case 06: /* ASR */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					sc = (~mb) & 00037;
+// KE8E					}
+// KE8E					    long int shift;
+// KE8E					    shift = (ac<<12)|mq;
+// KE8E					    link = (ac<<1)&010000;
+// KE8E					    do (;;) {
+// KE8E						shift=(link|shift)>>1;
+// KE8E						sc ++;sc &= 037;
+// KE8E						if (sc == 0) break;
+// KE8E					    }
+// KE8E					    mq = shift & 07777;
+// KE8E					    shift >>= 12;
+// KE8E					    ac = shift & 07777;
+// KE8E					}
+// KE8E					break;
+// KE8E				case 07: /* LSR */
+// KE8E					cpma = pc | ifr;
+// KE8E					mb = memory[cpma];
+// KE8E					pc = (pc + 1) & 07777;
+// KE8E					sc = (~mb) & 00037;
+// KE8E					}
+// KE8E					    long int shift;
+// KE8E					    shift = (ac<<12)|mq;
+// KE8E					    do (;;) {
+// KE8E						shift >>= 1;
+// KE8E						sc ++;sc &= 037;
+// KE8E						if (sc == 0) break;
+// KE8E					    }
+// KE8E					    mq = shift & 07777;
+// KE8E					    shift >>= 12;
+// KE8E					    ac = shift & 07777;
+// KE8E					    link = 0;
+// KE8E					}
+// KE8E					break;
+// KE8E				}
+// KE8E			} else { /* mode B */
+// KE8E			    if ((mb & 00040) == 0) { /* CLASS 1 */
+// KE8E				switch ((mb & 00016) >> 1) {
+// KE8E				case 00: /* NOP */
+// KE8E					break;
+// KE8E				case 01: /* ACS */
+// KE8E					sc = ac & 037;
+// KE8E					break;
+// KE8E				case 02: /* */
+// KE8E					break;
+// KE8E				case 03: /* */
+// KE8E					break;
+// KE8E				case 04: /* */
+// KE8E					break;
+// KE8E				case 05: /* SAM */
+// KE8E					ac = mq - ac;
+// KE8E					break;
+// KE8E				case 06: /* */
+// KE8E					break;
+// KE8E				case 07: /* */
+// KE8E					break;
+// KE8E				}
+// KE8E			    } else { /* CLASS 2 */
+// KE8E				switch ((mb & 00016) >> 1) {
+// KE8E				case 00: /* SCA */
+// KE8E					ac = ac | sc;
+// KE8E					break;
+// KE8E				case 01: /* */
+// KE8E					break;
+// KE8E				case 02: /* */
+// KE8E					break;
+// KE8E				case 03: /* */
+// KE8E					break;
+// KE8E				case 04: /* */
+// KE8E					break;
+// KE8E				case 05: /* */
+// KE8E					break;
+// KE8E				case 06: /* */
+// KE8E					break;
+// KE8E				case 07: /* */
+// KE8E					break;
+// KE8E				}
+// KE8E			}
+ 			}
+ 		}
+ 	}
+ }
+ 
