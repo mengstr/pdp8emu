@@ -158,10 +158,11 @@ static char * help_message = "\
 \r\n\
 PDP-8/E emulator, commands are:\r\n\
 \n\
- nnnnnG = goto location N  nnnnn/ = open memory location N\r\n\
- C = continue from halt    A = open accumulator\r\n\
- L = open link             S = open switch register\r\n\
- <cr> = close unchanged    nnnn<cr> = store N in open location, then close\r\n\
+ nnnnnG = goto location N   nnnnn/ = open memory location N\r\n\
+ nnnnnT = trace location N \r\n\
+ C = continue from halt     A = open accumulator\r\n\
+ L = open link              S = open switch register\r\n\
+ <cr> = close unchanged     nnnn<cr> = store N in open location, then close\r\n\
  the value in a location is printed when that location is opened.\r\n\
 \n\
  D = list all devices\r\n\
@@ -241,6 +242,13 @@ static void console_event(void)
 			break;
 		case 'G':
 		case 'g': /* Go */
+		case 'T':
+		case 't': /* Trace */
+			if (ch=='T' || ch=='t') {
+				trace=1;
+			} else {
+				trace=0;
+			}
 			clearflags();
 			if (number >= 0) {
 				pc = number & 07777;
@@ -262,7 +270,7 @@ static void console_event(void)
 			break;
 		case 'Q':
 		case 'q': /* Quit */
-			ttyputs( "\r\n" );
+			ttyputs( "\r\nQuitting\r\n" );
 			powerdown();
 			/* the above never returns */
 			break;

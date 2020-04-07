@@ -33,7 +33,7 @@
 
 extern char corename[NAME_LENGTH]; /* name of core image file, if any */
 extern char * progname; /* name of program itself (argv[0]) */
-
+extern int trace; /* true if disassembly/trace is output while running */
 
 /**********/
 /* Memory */

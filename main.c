@@ -26,13 +26,10 @@
 #include "tty-kl8e.h"
 #include "mem-km8e.h"
 
-
-
 char corename[NAME_LENGTH]; /* name of core image file, if any */
 char * progname; /* name of program itself (argv[0]) */
-
+int trace; /* true if disassembly/trace is output while running */
 int memory[MAXMEM];
-
 
 /*******************************/
 /* Generally visible registers */
@@ -280,7 +277,7 @@ int main(int argc, char **argv)
 
 		/* the actual instruction fetch is here */
 		mb = memory[cpma];
-		// accumulate_debug(cpma,mb,ac,link,irq);
+		if (trace) accumulate_debug(cpma,mb,ac,link,irq);
 		countdown -= shortcycle;
 
 		switch (mb >> 7) { /* note that we decode i and z here */
