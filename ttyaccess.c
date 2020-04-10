@@ -249,7 +249,7 @@ void ttygets(char * buf, int len) /* get string from console */
 	int ch;
 	do {
 		ch = ttygetc();
-		if (ch == '\b') {
+		if (ch == '\b' || ch==127) {
 			if (i > 0) {
 				ttyputs( "\b \b" );
 				i--;
