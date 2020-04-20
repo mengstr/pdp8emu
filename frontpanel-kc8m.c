@@ -10,11 +10,14 @@
 
 */
 
+#define _XOPEN_SOURCE 500   // Enable timestruct definitions in C99
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include <strings.h>
 #include "realtime.h"
@@ -262,7 +265,7 @@ static char parse_nums(char *p, int *num1, int *num2) {
 
 char* toThousandsString(long long val) {
     static char result[ 128 ];
-    snprintf(result, sizeof(result), "%lld", val);
+    sprintf(result, "%lld", val);
     int i = strlen(result) - 1;
     int i2 = i + (i / 3);
     int c = 0;
@@ -277,6 +280,7 @@ char* toThousandsString(long long val) {
 }
 
 void console(void) {
+    struct timespec ts100us = { .tv_sec = 0, .tv_nsec = 1000000  };
 	char ch;
 	char *p;
 	int i,cnt;
@@ -286,7 +290,7 @@ void console(void) {
 	// Spend 1/10 of a second here making sure the tty buffer is processed
 	for (i=0; i<100; i++) {
 		fire_timer();
-		usleep(1000);
+		nanosleep(&ts100us,NULL);
 	}
 
 	// printf("\r\n %s executed\r\n",toThousandsString(opcnt));
@@ -416,25 +420,25 @@ void console(void) {
 				if (num1!=-1 && ch>0) {
 					for (i=0; i<MAX_BREAKPOINTS; i++) {
 						if (bp_type[i]==0) {
-							if (ch=='E'|ch=='e') {
+							if (ch=='E' || ch=='e') {
 								bp_type[i]='E';
 								bp[i]=num1;
 								printf("Added BP for execution at address %04o\r\n",num1);
 								i=MAX_BREAKPOINTS;
 							}
-							if (ch=='R'|ch=='r') {
+							if (ch=='R' || ch=='r') {
 								bp_type[i]='R';
 								bp[i]=num1;
 								printf("Added BP for read of address %04o\r\n",num1);
 								i=MAX_BREAKPOINTS;
 							}
-							if (ch=='W'|ch=='w') {
+							if (ch=='W' || ch=='w') {
 								bp_type[i]='W';
 								bp[i]=num1;
 								printf("Added BP for write of address %04o\r\n",num1);
 								i=MAX_BREAKPOINTS;
 							}
-							if (ch=='O'|ch=='o') {
+							if (ch=='O' || ch=='o') {
 								bp_type[i]='O';
 								bp[i]=num1;
 								printf("Added BP for opcode  %04o\r\n",num1);
@@ -442,8 +446,8 @@ void console(void) {
 							}
 						}
 					}
-					break;
 				}
+				break;
 			case 'l': // List devices
 				list_devices();	
 				break;

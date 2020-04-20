@@ -43,7 +43,7 @@ extern = tty-kl8e.o hstape-pc8e.o card-cr8f.o floppy-rx8e.o
 INTERP = -DPDP8NAME=\"$(INTERPRETER)\"
 options = $(CPU) -Wall -Wimplicit-fallthrough -Wunused-result -std=c99 $(CONSOLE) $(INTERN) $(EXTERN)
 objects = $(cpu) $(console) $(intern) $(extern)
-libraries = $(conslib)
+libraries = -pthread -lpthread
 
 
 ##########################################################################

@@ -4,16 +4,26 @@
    Purpose: Handle character-by-character input from stdin and udp using pthreads
 */
 
+#define _XOPEN_SOURCE 500   // Enable timestruct definitions in C99
+
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/select.h>
 #include <stdlib.h>
-#include  <string.h>
+#include <string.h>
+#include <strings.h>
 #include <sgtty.h>
+#include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/errno.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
 #include "ttyaccess.h"
 
 struct threaddata_struct {
@@ -83,16 +93,24 @@ int count_rb(void)  {
 // mode=true for raw, false=normal
 //
 static void set_stdin_raw(int mode) {
-	struct sgttyb sg;
-	ioctl(STDIN_FILENO, TIOCGETP, &sg);
+    static struct termios oldtio;
+    static int lastMode=0;
+    struct termios newtio;
+
     if (mode) {
-        sg.sg_flags |= CBREAK;
-        sg.sg_flags &= ~ECHO;
+        tcgetattr(STDIN_FILENO, &oldtio); // save current port settings
+        
+        bzero(&newtio, sizeof(newtio));
+        newtio.c_lflag=0;       // set input mode (non-canonical, no echo
+        newtio.c_cc[VTIME]=0;   // inter-character timer unused 
+        newtio.c_cc[VMIN]=1;    // blocking read 
+        
+        tcflush(STDIN_FILENO, TCIFLUSH);
+        tcsetattr(STDIN_FILENO, TCSANOW, &newtio);
     } else {
-        sg.sg_flags &= ~CBREAK;
-        sg.sg_flags |= ECHO;
+        if (lastMode) tcsetattr(STDIN_FILENO, TCSANOW, &oldtio);
     }
-	ioctl(STDIN_FILENO, TIOCSETN, &sg);
+    lastMode=mode;
 }
 
 
@@ -203,11 +221,12 @@ void comms_cleanup(void) {
 //
 int ttygetc(void) {
 	int ch;
+    struct timespec ts100us = { .tv_sec = 0, .tv_nsec = 1000000  };
 	do {
 		ch=get_from_rb();
         if (ch<0) {
         	if (breakcnt>4) ttybreak();
-            usleep(100);
+            nanosleep(&ts100us,NULL);
         }
     } while (ch<0);
 	return ch;
