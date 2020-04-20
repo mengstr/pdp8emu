@@ -25,6 +25,8 @@
 */
 #define NAME_LENGTH 120
 
+#define MAX_BREAKPOINTS 4
+#define MAX_WATCHES  8
 
 
 /*****************************************************/
@@ -34,6 +36,10 @@
 extern char corename[NAME_LENGTH]; /* name of core image file, if any */
 extern char * progname; /* name of program itself (argv[0]) */
 extern int trace; /* true if disassembly/trace is output while running */
+extern int bp[MAX_BREAKPOINTS];
+extern int bp_type[MAX_BREAKPOINTS];   // 0=disabled, 1=address, 2=opcode
+extern int watch[MAX_WATCHES];
+extern long long opcnt;
 
 /**********/
 /* Memory */
@@ -49,6 +55,16 @@ extern int trace; /* true if disassembly/trace is output while running */
 
 extern int memory[MAXMEM];
 
+#define RUNMODE_BP_O       -7    // Stop caused by Opcode BP
+#define RUNMODE_BP_R       -6    // Stop caused by Read BP
+#define RUNMODE_BP_W       -5    // Stop caused by Write BP
+#define RUNMODE_BP_E       -4    // Stop caused by Execute BP
+#define RUNMODE_CNT        -3    // Stop caused by execution count
+#define RUNMODE_BREAK      -2    // Stop caused by 5x ctrl-C
+#define RUNMODE_HLT        -1    // Stop caused by HLT instruction
+#define RUNMODE_STOPPED     0    // Stopped
+#define RUNMODE_RUNNING     1    // Running normally
+#define RUNMODE_STARTING    2    // Starting to run after a stop
 
 /*******************************/
 /* Generally visible registers */
@@ -64,8 +80,8 @@ extern int sr;  /* the switch register */
 extern int cpma;/* the memory address register */
 extern int mb;  /* the memory buffer register */
 
-extern int link;/* the link bit, 1 bit, in position 010000 of the word */
-extern int run; /* the run flipflop, 0 = halt, 1 = running */
+extern int lnk; /* the link bit, 1 bit, in position 010000 of the word */
+extern int run; /* the run state */
 
 extern int enab;/* interrupt enable bit, 0 = disable, 1=enable */
 extern int enab_rtf; /* secodary enable needed for RTF deferred enable */

@@ -31,8 +31,8 @@ void bin(void)
 	for (;;) {
 		if ((c = getchar()) == EOF) return;
 		if ((c&0300) == 0300) {
-			// printf("Field\n");
 			fld=c&07;
+			// printf("Field %d\n",fld);
 			continue;
 		}
 		if ((c&0300) == 0200) {
@@ -52,9 +52,12 @@ void bin(void)
 			if ((c = getchar()) == EOF) return;
 			md=(md<<6)+c;
 			if (fld==0) {
-				// printf("Memory[%04o]=%04o \n", ma,md);
+				// if (memory[ma]==0) printf("Memory[%04o]=%04o \n", ma,md);
+				// else printf("Memory[%04o]=%04o Overwrite from %04o\n", ma,md,memory[ma]);
 				restore=memory[ma];
 				memory[ma]=md;
+			} else {
+				// printf("(Memory[%04o]=%04o)\n", ma,md);
 			}
 			ma++;
 			stop_at_header=1;

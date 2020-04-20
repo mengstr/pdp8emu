@@ -18,6 +18,7 @@
 #include "realtime.h"
 #include "ttyaccess.h"
 #include "debug.h"
+#include "disasm.h"
 #include "hstape-pc8e.h"
 #include "floppy-rx8e.h"
 #include "card-cr8f.h"
@@ -30,6 +31,11 @@ char corename[NAME_LENGTH]; /* name of core image file, if any */
 char * progname; /* name of program itself (argv[0]) */
 int trace; /* true if disassembly/trace is output while running */
 int memory[MAXMEM];
+int bp[MAX_BREAKPOINTS];
+int bp_type[MAX_BREAKPOINTS];   // 0=disabled, 1=address, 2=opcode
+int watch[MAX_WATCHES];
+long long opcnt;
+
 
 /*******************************/
 /* Generally visible registers */
@@ -45,8 +51,8 @@ int sr;  /* the switch register */
 int cpma;/* the memory address register */
 int mb;  /* the memory buffer register */
 
-int link;/* the link bit, 1 bit, in position 010000 of the word */
-int run; /* the run flipflop, 0 = halt, 1 = running */
+int lnk;/* the link bit, 1 bit, in position 010000 of the word */
+int run; /* the run mode according to RUNMODE_xxxx */
 
 int enab;/* interrupt enable bit, 0 = disable, 1=enable */
 int enab_rtf; /* secodary enable needed for RTF deferred enable */
@@ -105,7 +111,7 @@ void clearflags(void)
 	pc8einit(); /* paper tape reader punch */
 	cr8finit(); /* card reader */
 	rx8einit(); /* diskette drive */
-	link = 000000;
+	lnk = 000000;
 	ac = 00000;
 	irq = 0;
 	enab = 0;
@@ -135,12 +141,9 @@ void powerup(int argc, char** argv)
 	   no core file specified, core comes up uninitialized.
 	*/
 
-	run = 0; /* by default, the machine comes up halted */
+	run = RUNMODE_STOPPED; /* by default, the machine comes up halted */
 
 	getargs( argc, argv );
-
-	/* take over the TTY */
-	ttyraw();
 
 	/* initialize the real-time simulation mechanisms */
 	init_timers();
@@ -149,10 +152,7 @@ void powerup(int argc, char** argv)
 
 	/* core must be registered first because it's going to be
 	   on the console device window at console-power up */
-        register_device( opencore, closecore, 0,
-                         "CORE", "- saved image of main memory   ",
-                         corename );
-
+    register_device( opencore, closecore, 0, "CORE", "- saved image of main memory   ", corename );
 	kc8power( argc, argv ); /* console */
 // KE8E	ke8epower(); /* eae */
 	km8epower(); /* mmu */
@@ -168,16 +168,16 @@ void powerup(int argc, char** argv)
 		/* if the machine was running when last stopped, this may
 		   set the run flipflop */
 	}
+
 	clearflags();
+
 }
 
 void powerdown(void)
 /* called only once from the console to exit the emulator */
 {
-	ttyrestore();
-	if (corename[0] != '\0') { /* there is a core file */
-		dumpcore();
-	}
+	if (corename[0] != '\0') dumpcore();
+	comms_cleanup();
 	close_devices();
 	exit(0);
 }
@@ -236,15 +236,52 @@ void powerdown(void)
 	}								\
 }
 
+
+void write_memory(int a, int v) {
+	if (run==RUNMODE_RUNNING) {	
+		if (bp_type[0]=='W' && a==bp[0]) run=RUNMODE_BP_W;
+		else if (bp_type[1]=='W' && a==bp[1]) run=RUNMODE_BP_W;
+		else if (bp_type[2]=='W' && a==bp[2]) run=RUNMODE_BP_W;
+		else if (bp_type[3]=='W' && a==bp[3]) run=RUNMODE_BP_W;
+	}
+	memory[a]=v;
+}
+
+
+int read_memory(int a) {
+	if (run==RUNMODE_RUNNING) {	
+		if (bp_type[0]=='R' && a==bp[0]) run=RUNMODE_BP_R;
+		else if (bp_type[1]=='R' && a==bp[1]) run=RUNMODE_BP_R;
+		else if (bp_type[2]=='R' && a==bp[2]) run=RUNMODE_BP_R;
+		else if (bp_type[3]=='R' && a==bp[3]) run=RUNMODE_BP_R;
+	}
+	return memory[a];
+}
+
+// char *getAll() {
+// 	static char buf[100];
+// 	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o IRQ=%d %04o",
+// 		ifr,pc,dfr,lnk?1:0,ac,mq,irq,memory[pc&4095]
+// 	);
+// 	return buf;
+// }
+
 /* Emulate the fetch/execute cycle */
 int main(int argc, char **argv)
 {
+	comms_init();
 	powerup(argc,argv);
-	if (run == 0) {
-		kc8halt();
-	}
 
+	run=RUNMODE_STOPPED;
 	for (;;) {
+		if (run <= RUNMODE_STOPPED) {
+			console();
+			opcnt=0;
+			continue;
+		}
+
+		opcnt++;
+
 		/* setup to fetch from pc */
 		cpma = pc | ifr;
 		/* I/O and console activity happens with CPMA holding PC */
@@ -273,7 +310,17 @@ int main(int argc, char **argv)
 
 		/* the actual instruction fetch is here */
 		mb = memory[cpma];
-		if (trace) accumulate_debug(cpma,mb,ac,link,irq);
+		if (run==RUNMODE_RUNNING) {	
+			if (bp_type[0]=='O' && mb==bp[0]) {run=RUNMODE_BP_O; continue;}
+			if (bp_type[1]=='O' && mb==bp[1]) {run=RUNMODE_BP_O; continue;}
+			if (bp_type[2]=='O' && mb==bp[2]) {run=RUNMODE_BP_O; continue;}
+			if (bp_type[3]=='O' && mb==bp[3]) {run=RUNMODE_BP_O; continue;}
+			if (bp_type[0]=='E' && cpma==bp[0]) {run=RUNMODE_BP_E; continue;}
+			if (bp_type[1]=='E' && cpma==bp[1]) {run=RUNMODE_BP_E; continue;}
+			if (bp_type[2]=='E' && cpma==bp[2]) {run=RUNMODE_BP_E; continue;}
+			if (bp_type[3]=='E' && cpma==bp[3]) {run=RUNMODE_BP_E; continue;}
+		}
+		accumulate_debug(cpma,mb,ac,lnk,irq);
 		countdown -= shortcycle;
 
 		switch (mb >> 7) { /* note that we decode i and z here */
@@ -282,14 +329,14 @@ int main(int argc, char **argv)
 		case opAND | DIRECT | ZERO:
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
-			ac = ac & memory[cpma];
+			ac = ac & read_memory(cpma);
 			countdown -= longcycle;
 			break;
 
 		case opAND | DIRECT | CURRENT:
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
-			ac = ac & memory[cpma];
+			ac = ac & read_memory(cpma);
 			countdown -= longcycle;
 			break;
 
@@ -297,7 +344,7 @@ int main(int argc, char **argv)
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			ac = ac & memory[cpma];
+			ac = ac & read_memory(cpma);
 			countdown -= longcycle;
 			break;
 
@@ -305,7 +352,7 @@ int main(int argc, char **argv)
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			ac = ac & memory[cpma];
+			ac = ac & read_memory(cpma);
 			countdown -= longcycle;
 			break;
 
@@ -313,8 +360,8 @@ int main(int argc, char **argv)
 		case opTAD | DIRECT | ZERO:
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
-			ac = (ac | link) + memory[cpma];
-			link = ac & 010000;
+			ac = (ac | lnk) + read_memory(cpma);
+			lnk = ac & 010000;
 			ac = ac & 007777;
 			countdown -= longcycle;
 			break;
@@ -322,8 +369,8 @@ int main(int argc, char **argv)
 		case opTAD | DIRECT | CURRENT:
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
-			ac = (ac | link) + memory[cpma];
-			link = ac & 010000;
+			ac = (ac | lnk) + read_memory(cpma);
+			lnk = ac & 010000;
 			ac = ac & 007777;
 			countdown -= longcycle;
 			break;
@@ -332,8 +379,8 @@ int main(int argc, char **argv)
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			ac = (ac | link) + memory[cpma];
-			link = ac & 010000;
+			ac = (ac | lnk) + read_memory(cpma);
+			lnk = ac & 010000;
 			ac = ac & 007777;
 			countdown -= longcycle;
 			break;
@@ -342,8 +389,8 @@ int main(int argc, char **argv)
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			ac = (ac | link) + memory[cpma];
-			link = ac & 010000;
+			ac = (ac | lnk) + read_memory(cpma);
+			lnk = ac & 010000;
 			ac = ac & 007777;
 			countdown -= longcycle;
 			break;
@@ -352,7 +399,7 @@ int main(int argc, char **argv)
 		case opISZ | DIRECT | ZERO:
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
-			mb = memory[cpma] = ((memory[cpma] + 1) & 07777);
+			mb = memory[cpma] = ((read_memory(cpma) + 1) & 07777);
 			if (mb == 0) {
 				pc = (pc + 1) & 07777;
 			}
@@ -362,7 +409,7 @@ int main(int argc, char **argv)
 		case opISZ | DIRECT | CURRENT:
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
-			mb = memory[cpma] = ((memory[cpma] + 1) & 07777);
+			mb = memory[cpma] = ((read_memory(cpma) + 1) & 07777);
 			if (mb == 0) {
 				pc = (pc + 1) & 07777;
 			}
@@ -373,7 +420,7 @@ int main(int argc, char **argv)
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			mb = memory[cpma] = ((memory[cpma] + 1) & 07777);
+			mb = memory[cpma] = ((read_memory(cpma) + 1) & 07777);
 			if (mb == 0) {
 				pc = (pc + 1) & 07777;
 			}
@@ -384,7 +431,7 @@ int main(int argc, char **argv)
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			mb = memory[cpma] = ((memory[cpma] + 1) & 07777);
+			mb = memory[cpma] = ((read_memory(cpma) + 1) & 07777);
 			if (mb == 0) {
 				pc = (pc + 1) & 07777;
 			}
@@ -395,7 +442,7 @@ int main(int argc, char **argv)
 		case opDCA | DIRECT | ZERO:
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
-			memory[cpma] = ac;
+			write_memory(cpma, ac);
 			ac = 00000;
 			countdown -= longcycle;
 			break;
@@ -403,7 +450,7 @@ int main(int argc, char **argv)
 		case opDCA | DIRECT | CURRENT:
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
-			memory[cpma] = ac;
+			write_memory(cpma, ac);
 			ac = 00000;
 			countdown -= longcycle;
 			break;
@@ -412,7 +459,7 @@ int main(int argc, char **argv)
 			PAGE_ZERO;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			memory[cpma] = ac;
+			write_memory(cpma, ac);
 			ac = 00000;
 			countdown -= longcycle;
 			break;
@@ -421,7 +468,7 @@ int main(int argc, char **argv)
 			CURRENT_PAGE;
 			pc = (pc + 1) & 07777;
 			DEFER_CYCLE;
-			memory[cpma] = ac;
+			write_memory(cpma, ac);
 			ac = 00000;
 			countdown -= longcycle;
 			break;
@@ -434,7 +481,7 @@ int main(int argc, char **argv)
 			ifr = ib;
 			uf = ub;
 			enab_rtf = 1;
-			memory[cpma] = (pc + 1) & 07777;
+			write_memory(cpma, (pc + 1) & 07777);
 			countdown -= longcycle;
 			pc = (cpma + 1) & 07777;
 			break;
@@ -445,7 +492,7 @@ int main(int argc, char **argv)
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
 			enab_rtf = 1;
-			memory[cpma] = (pc + 1) & 07777;
+			write_memory(cpma, (pc + 1) & 07777);
 			countdown -= longcycle;
 			pc = (cpma + 1) & 07777;
 			break;
@@ -457,7 +504,7 @@ int main(int argc, char **argv)
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
 			enab_rtf = 1;
-			memory[cpma] = (pc + 1) & 07777;
+			write_memory(cpma, (pc + 1) & 07777);
 			countdown -= longcycle;
 			pc = (cpma + 1) & 07777;
 			break;
@@ -469,7 +516,7 @@ int main(int argc, char **argv)
 			uf = ub;
 			cpma = (cpma & 07777) | ifr;
 			enab_rtf = 1;
-			memory[cpma] = (pc + 1) & 07777;
+			write_memory(cpma, (pc + 1) & 07777);
 			countdown -= longcycle;
 			pc = (cpma + 1) & 07777;
 			break;
@@ -552,7 +599,7 @@ int main(int argc, char **argv)
 					}
 					break;
 				case 04: /* GTF */
-					ac = (link >> 1)       /* bit 0 */
+					ac = (lnk >> 1)       /* bit 0 */
 // KE8E				   | (gt?)	       /* bit 1 KE8E */
 					   | ((irq > 0) << 9)  /* bit 2 */
 					   | (0)	/*?*/  /* bit 3 */
@@ -561,7 +608,7 @@ int main(int argc, char **argv)
 					;
 					break;
 				case 05: /* RTF */
-					link = (ac<<1)& 010000; /* bit 0 */
+					lnk = (ac<<1)& 010000; /* bit 0 */
 // KE8E				gt = ?			/* bit 1 KE8E */
 					/* nothing */		/* bit 2 */
 					/* nothing */		/* bit 3 */
@@ -583,45 +630,45 @@ int main(int argc, char **argv)
 				}
 				break;
 
-			case 001:
-				pc8edev1(mb & 07);
-				break;
-			case 002:
-				pc8edev2(mb & 07);
-				break;
+			// case 001:	// High Speed Tape
+			// 	pc8edev1(mb & 07);
+			// 	break;
+			// case 002:	// High Speed Tape
+			// 	pc8edev2(mb & 07);
+			// 	break;
 
-			case 003:
+			case 003:	// TTY Keyboard
 				kl8edev3(mb & 07);
 				break;
-			case 004:
+			case 004:	// TTY Printer
 				kl8edev4(mb & 07);
 				break;
 
-			case 013:
-				dk8edev(mb & 07);
-				break;
+			// case 013:	// RTC
+			// 	dk8edev(mb & 07);
+			// 	break;
 
-			case 020:
-			case 021:
-			case 022:
-			case 023:
-			case 024:
-			case 025:
-			case 026:
-			case 027:
-				km8edev(mb & 077);
-				break;
+			// case 020:	// Memory Management
+			// case 021:
+			// case 022:
+			// case 023:
+			// case 024:
+			// case 025:
+			// case 026:
+			// case 027:
+			// 	km8edev(mb & 077);
+			// 	break;
 
-			case 063:
-				cr8fdev3(mb & 07);
-				break;
-			case 067:
-				cr8fdev7(mb & 07);
-				break;
+			// case 063:	// Card reader
+			// 	cr8fdev3(mb & 07);
+			// 	break;
+			// case 067:	// Card reader
+			// 	cr8fdev7(mb & 07);
+			// 	break;
 
-			case 075:
-				rx8edev(mb & 07);
-				break;
+			// case 075:	// Floppy drive
+			// 	rx8edev(mb & 07);
+			// 	break;
 
 			default: /* non existant device */
 				break;
@@ -639,7 +686,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 001:	/*             CML */
-				link = link ^ 010000; 
+				lnk = lnk ^ 010000; 
 				break;
 
 			case 002:	/*         CMA     */
@@ -648,25 +695,25 @@ int main(int argc, char **argv)
 
 			case 003:	/*         CMA CML */
 				ac = ac ^ 007777;
-				link = link ^ 010000; 
+				lnk = lnk ^ 010000; 
 				break;
 
 			case 004:	/*     CLL         */
-				link = 000000; 
+				lnk = 000000; 
 				break;
 
 			case 005:	/*     CLL     CML */
-				link = 010000; 
+				lnk = 010000; 
 				break;
 
 			case 006:	/*     CLL CMA     */
 				ac = ac ^ 007777;
-				link = 000000; 
+				lnk = 000000; 
 				break;
 
 			case 007:	/*     CLL CMA CML */
 				ac = ac ^ 007777;
-				link = 010000; 
+				lnk = 010000; 
 				break;
 
 			case 010:	/* CLA             */
@@ -675,7 +722,7 @@ int main(int argc, char **argv)
 
 			case 011:	/* CLA         CML */
 				ac = 00000;
-				link = link ^ 010000; 
+				lnk = lnk ^ 010000; 
 				break;
 
 			case 012:	/* CLA     CMA     */
@@ -684,33 +731,33 @@ int main(int argc, char **argv)
 
 			case 013:	/* CLA     CMA CML */
 				ac = 07777;
-				link = link ^ 010000; 
+				lnk = lnk ^ 010000; 
 				break;
 
 			case 014:	/* CLA CLL         */
 				ac = 00000;
-				link = 000000;
+				lnk = 000000;
 				break;
 
 			case 015:	/* CLA CLL     CML */
 				ac = 00000;
-				link = 010000;
+				lnk = 010000;
 				break;
 
 			case 016:	/* CLA CLL CMA     */
 				ac = 07777;
-				link = 000000;
+				lnk = 000000;
 				break;
 
 			case 017:	/* CLA CLL CMA CML */
 				ac = 07777;
-				link = 010000;
+				lnk = 010000;
 				break;
 			}
 
 			if (mb & 00001) { /* IAC */
-				ac = (ac | link) + 1;
-				link = ac & 010000;
+				ac = (ac | lnk) + 1;
+				lnk = ac & 010000;
 				ac = ac & 007777;
 			}
 
@@ -725,26 +772,26 @@ int main(int argc, char **argv)
 				break;
 
 			case 02:	/*     RAL     */
-				ac = (ac << 1) | (link >> 12);
-				link = ac & 010000;
+				ac = (ac << 1) | (lnk >> 12);
+				lnk = ac & 010000;
 				ac = ac & 007777;
 				break;
 
 			case 03:	/*     RAL TWO */
-				ac = (ac << 2) | ((ac | link) >> 11);
-				link = ac & 010000;
+				ac = (ac << 2) | ((ac | lnk) >> 11);
+				lnk = ac & 010000;
 				ac = ac & 007777;
 				break;
 
 			case 04:	/* RAR         */
-				ac = ((ac | link) >> 1) | (ac << 12);
-				link = ac & 010000;
+				ac = ((ac | lnk) >> 1) | (ac << 12);
+				lnk = ac & 010000;
 				ac = ac & 007777;
 				break;
 
 			case 05:	/* RAR     TWO */
-				ac = ((ac | link) >> 2) | (ac << 11);
-				link = ac & 010000;
+				ac = ((ac | lnk) >> 2) | (ac << 11);
+				lnk = ac & 010000;
 				ac = ac & 007777;
 				break;
 
@@ -779,13 +826,13 @@ int main(int argc, char **argv)
 					break;
 
 				case 002: /*         SNL     */
-					if (link) {
+					if (lnk) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
 
 				case 003: /*         SNL REV */
-					if (link == 0) {
+					if (lnk == 0) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
@@ -803,13 +850,13 @@ int main(int argc, char **argv)
 					break;
 
 				case 006: /*     SZA SNL     */
-					if ((ac == 0) || link) {
+					if ((ac == 0) || lnk) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
 
 				case 007: /*     SZA SNL REV */
-					if (ac && (link == 0)) {
+					if (ac && (lnk == 0)) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
@@ -827,13 +874,13 @@ int main(int argc, char **argv)
 					break;
 
 				case 012: /* SMA     SNL     */
-					if ((ac | link) & 014000) {
+					if ((ac | lnk) & 014000) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
 
 				case 013: /* SMA     SNL REV */	
-					if (((ac | link) & 014000) == 0) {
+					if (((ac | lnk) & 014000) == 0) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
@@ -851,14 +898,14 @@ int main(int argc, char **argv)
 					break;
 
 				case 016: /* SMA SZA SNL     */
-					if (((ac | link) & 014000)
+					if (((ac | lnk) & 014000)
 					 || (ac == 0)) {
 						pc = (pc + 1) & 07777;
 					}
 					break;
 
 				case 017: /* SMA SZA SNL REV */	
-					if ((((ac | link) & 014000) == 0)
+					if ((((ac | lnk) & 014000) == 0)
 					 && (ac)) {
 						pc = (pc + 1) & 07777;
 					}
@@ -881,9 +928,8 @@ int main(int argc, char **argv)
 				}
 
 				if (mb & 00002) { /* HLT */
-					kc8halt();
+					run=RUNMODE_HLT;
 					countdown = 0;
-					run = 0;
 				}
 
 			} else { /* GROUP 3 */
@@ -925,7 +971,7 @@ int main(int argc, char **argv)
 // KE8E						long int prod = mp * mb;
 // KE8E						mq = prod & 07777;
 // KE8E						ac = (prod>>12) & 07777;
-// KE8E						link = 000000;
+// KE8E						lnk = 000000;
 // KE8E					}
 // KE8E					sc = 013;
 // KE8E					break;
@@ -938,12 +984,12 @@ int main(int argc, char **argv)
 // KE8E						idend = (ac << 12) | mq;
 // KE8E						mq = idend / mb;
 // KE8E						ac = idend % mb;
-// KE8E						link = 000000;
+// KE8E						lnk = 000000;
 // KE8E					} else { /* overflow */
 // KE8E						/* --- mq = ?? --- */
 // KE8E						ac = ac - mb;
-// KE8E						/* shift ac-mq-link */
-// KE8E						link = 010000;
+// KE8E						/* shift ac-mq-lnk */
+// KE8E						lnk = 010000;
 // KE8E						/* --- shift ?? --- */
 // KE8E					}
 // KE8E					sc = 014;
@@ -955,7 +1001,7 @@ int main(int argc, char **argv)
 // KE8E					} else {
 // KE8E					    /* NMI */
 // KE8E					    long int shift, news;
-// KE8E					    shift = (link | ac)<<12;
+// KE8E					    shift = (lnk | ac)<<12;
 // KE8E					    shift |= mq;
 // KE8E					    sc = 0;
 // KE8E					    do (;;) {
@@ -970,7 +1016,7 @@ int main(int argc, char **argv)
 // KE8E					    mq = shift & 07777;
 // KE8E					    shift >>= 12;
 // KE8E					    ac = shift & 07777;
-// KE8E					    link = shift & 010000;
+// KE8E					    lnk = shift & 010000;
 // KE8E					}
 // KE8E					break;
 // KE8E				case 05: /* SHL */
@@ -980,7 +1026,7 @@ int main(int argc, char **argv)
 // KE8E					sc = (~mb) & 00037;
 // KE8E					}
 // KE8E					    long int shift;
-// KE8E					    shift = (link | ac)<<12;
+// KE8E					    shift = (lnk | ac)<<12;
 // KE8E					    shift |= mq;
 // KE8E					    do (;;) {
 // KE8E						shift <<= 1;
@@ -990,7 +1036,7 @@ int main(int argc, char **argv)
 // KE8E					    mq = shift & 07777;
 // KE8E					    shift >>= 12;
 // KE8E					    ac = shift & 07777;
-// KE8E					    link = shift & 010000;
+// KE8E					    lnk = shift & 010000;
 // KE8E					}
 // KE8E					break;
 // KE8E				case 06: /* ASR */
@@ -1001,9 +1047,9 @@ int main(int argc, char **argv)
 // KE8E					}
 // KE8E					    long int shift;
 // KE8E					    shift = (ac<<12)|mq;
-// KE8E					    link = (ac<<1)&010000;
+// KE8E					    lnk = (ac<<1)&010000;
 // KE8E					    do (;;) {
-// KE8E						shift=(link|shift)>>1;
+// KE8E						shift=(lnk|shift)>>1;
 // KE8E						sc ++;sc &= 037;
 // KE8E						if (sc == 0) break;
 // KE8E					    }
@@ -1028,7 +1074,7 @@ int main(int argc, char **argv)
 // KE8E					    mq = shift & 07777;
 // KE8E					    shift >>= 12;
 // KE8E					    ac = shift & 07777;
-// KE8E					    link = 0;
+// KE8E					    lnk = 0;
 // KE8E					}
 // KE8E					break;
 // KE8E				}
@@ -1077,6 +1123,7 @@ int main(int argc, char **argv)
 // KE8E			}
  			}
  		}
+	if (run==RUNMODE_STARTING) run=RUNMODE_RUNNING;
  	}
  }
  

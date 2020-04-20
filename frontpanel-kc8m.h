@@ -1,3 +1,4 @@
+void console(void);
 void kc8halt(void);
 void kc8init(void);
 void kc8power(int argc,char **argv);

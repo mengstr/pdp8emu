@@ -6,7 +6,7 @@
 */
 
 char *ops[4096] = {
-	"AND 0000   ;AND operand with AC, ZP 0000", // op 0000
+	"AND 0000   ;AND operand with AC, ZP 0000 ", // op 0000
 	"AND 0001   ;AND operand with AC, ZP 0001", // op 0001
 	"AND 0002   ;AND operand with AC, ZP 0002", // op 0002
 	"AND 0003   ;AND operand with AC, ZP 0003", // op 0003
@@ -3097,27 +3097,27 @@ char *ops[4096] = {
 	"PCE        ;PR8-E: Clear ReaderPunch Interrupt Enable", // op 6020
 	"PSF        ;PP8-E: Skip on Punch Flag", // op 6021
 	"PCF        ;PP8-E: Clear Punch Flag", // op 6022
-	"           ;'      ", // op 6023
+	"           ; ", // op 6023
 	"@@C        ;PP8-E: Load Punch Buffer and Punch Character", // op 6024
-	"           ;'      ", // op 6025
+	"           ; ", // op 6025
 	"PLS        ;PP8-E: Load Punch Sequence", // op 6026
-	"           ;'      ", // op 6027
+	"           ; ", // op 6027
 	"KCF        ;KL8-E: Clear Keyboard Flag", // op 6030
 	"KSF        ;KL8-E: Skip on Keyboard Flag", // op 6031
 	"KCC        ;KL8-E: Clear Keyboard Flag", // op 6032
-	"           ;'      ", // op 6033
+	"           ; ", // op 6033
 	"KRS        ;KL8-E: Read Keyboard Buffer Static", // op 6034
 	"KIE        ;KL8-E: SetClear Keyboard Interrupt Enable", // op 6035
 	"KRB        ;KL8-E: Read Keyboard Buffer Dynamic", // op 6036
-	"           ;'      ", // op 6037
+	"           ; ", // op 6037
 	"TFL        ;KL8-E: Set Teleprinter Flag", // op 6040
 	"TSF        ;KL8-E: Skip on Teleprinter Flag", // op 6041
 	"TCF        ;KL8-E: Clear Teleprinter Flag", // op 6042
-	"           ;'      ", // op 6043
+	"           ; ", // op 6043
 	"TPC        ;KL8-E: Load Teleprinter and Print", // op 6044
 	"TSK        ;KL8-E: Skip on Keyboard or Printer Flag", // op 6045
 	"TLS        ;KL8-E: Load Teleprinter Sequence", // op 6046
-	"           ;'      ", // op 6047
+	"           ; ", // op 6047
 	"DILC       ;VC8-E: Clear All Logic", // op 6050
 	"DICD       ;VC8-E: Clear Done Flag", // op 6051
 	"DISD       ;VC8-E: Skip on Done Flag", // op 6052
@@ -3126,22 +3126,22 @@ char *ops[4096] = {
 	"           ;", // op 6055
 	"DILE       ;VC8-E: Load Enable", // op 6056
 	"DIRE       ;VC8-E: Read EnableStatus Register", // op 6057
-	"           ;'     ", // op 6060
+	"           ;", // op 6060
 	"WTCD       ;VW01: Clear Data Ready Flag", // op 6061
 	"WTRY       ;VW01: Read Y", // op 6062
-	"           ;'     ", // op 6063
+	"           ;", // op 6063
 	"WTMN       ;VW01: Clear Set XY", // op 6064
-	"           ;'     ", // op 6065
-	"           ;'     ", // op 6066
-	"           ;'     ", // op 6067
-	"           ;'     ", // op 6070
+	"           ;", // op 6065
+	"           ;", // op 6066
+	"           ;", // op 6067
+	"           ;", // op 6070
 	"WTSK       ;VW01: Writing Tablet Skip", // op 6071
 	"WTRS       ;VW01: Read Status", // op 6072
-	"           ;'     ", // op 6073
+	"           ;", // op 6073
 	"WTSE       ;VW01: Select Tablet", // op 6074
-	"           ;'     ", // op 6075
-	"           ;'     ", // op 6076
-	"           ;'     ", // op 6077
+	"           ;", // op 6075
+	"           ;", // op 6076
+	"           ;", // op 6077
 	"DPI        ;MP8-E: Disable Memory Parity Interrupt", // op 6100
 	"SMP        ;MP8-E: Skip on No Memory Parity Error", // op 6101
 	"SPL        ;KP8-E: Skip on Low Power", // op 6102
@@ -3158,7 +3158,7 @@ char *ops[4096] = {
 	"MINT       ;DC02-F: Set Interrupt Flip-Flop", // op 6115
 	"RCCB       ;DP8-EP: Clear BCC Accumulation", // op 6116
 	"RCTC       ;DP8-EP: Maintenance Test Clock", // op 6117
-	"           ;'     ", // op 6120
+	"           ;", // op 6120
 	"MTSF       ;DC02-F: Skip on Transmitter Flag", // op 6121
 	"MTCF       ;DC02-F: Clear Transmitter Flag", // op 6122
 	"MTKF       ;DC02-F: Read Receiver Flag Status", // op 6123

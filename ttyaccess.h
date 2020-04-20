@@ -1,10 +1,7 @@
-void ttygets(char *buf,int len);
-void ttyputs(char *buf);
-int ttygetc(void);
-int ttypoll(void);
-void ttystuff(char ch);
-void ttyputc(char ch);
 extern void(*ttybreak)();
-void ttyraw(void);
-void ttyrestore(void);
-void ttyrestore(void);
+
+int ttygetc(void);
+void ttygets(char *buf,int len);
+int ttypoll(void);
+void comms_init(void);
+void comms_cleanup(void);

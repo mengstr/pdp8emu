@@ -19,6 +19,7 @@
 */
 
 #include <stdio.h>
+#include <unistd.h>
 #include "realtime.h"
 #include "bus.h"
 #include "ttyaccess.h"
@@ -49,12 +50,14 @@
 #define baud2400 (  4166 * microsecond)
 #define baud4800 (  2083 * microsecond)
 #define baud9600 (  1041 * microsecond)
+#define baudfpga (   950 * microsecond)
+#define baudmax  (     1 * microsecond)
 
 /* select the baud rate here (note: if the emulator runs at 1/10 the speed
    of the real PDP-8, 1200 baud simulation will look like 110 to a person! */
 
-#define print_time baud110 
-#define read_time baud110
+#define print_time baudfpga
+#define read_time baudfpga
 
 
 /****************************************************************/
@@ -116,7 +119,8 @@ static void read_character(void)
 static void print_event(int p)
 { /* called from timer when a byte has been successfully printed */
 	/* this code allows for the DEC convention of setting the high bit */
-	ttyputc( print_buffer & 0177 );
+	unsigned char ch=print_buffer & 0177;
+	write(STDOUT_FILENO, &ch, 1);
 	print_flag = 1;
 	if (interrupt_enable == 1) {
 		irq = irq + 1;

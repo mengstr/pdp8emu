@@ -13,18 +13,53 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/errno.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <strings.h>
 #include "realtime.h"
 #include "bus.h"
 #include "ttyaccess.h"
 #include "debug.h"
 #include "kk8e.h"
+#include "disasm.h"
+
 
 #define control(ch) (ch & 037)
 
 /*********************/
 /* utility functions */
 /*********************/
+
+//
+// 123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_
+// PC=_:____  DF=_ L=_ AC=____ MQ=____ AI=____ ____ ____ ____ ____ ____ ____ ____ 
+//
+char *getAllRegs() {
+	static char buf[100];
+	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o AI=%04o %04o %04o %04o %04o %04o %04o %04o",
+		ifr,pc,dfr,lnk?1:0,ac,mq,memory[010],memory[011],memory[012],memory[013],memory[014],memory[015],memory[016],memory[017]
+	);
+	return buf;
+}
+
+//
+// 123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_
+// ____=____ ____=____ ____=____ ____=____ ____=____ ____=____ ____=____ ____=____ 
+//
+char *getAllWatched() {
+	static char buf[100];
+	static char tmps[100];
+	buf[0]=0;
+	for (int i=0; i<MAX_WATCHES; i++) {
+		if (watch[i]>=0) {
+			sprintf(tmps,"%04o=%04o ",watch[i],memory[watch[i]]);
+			strcat(buf,tmps);
+		}
+	}
+	return buf;
+}
+
 
 void ttyoctal(int num, int digits ,char * suffix)
 {
@@ -44,7 +79,7 @@ void ttyoctal(int num, int digits ,char * suffix)
 		}
 	}
 	buf[i] = '\0';
-	ttyputs(buf);
+	printf("%s",buf);
 }
 
 
@@ -111,12 +146,9 @@ void dump_devices(FILE *f)
 static void list_devices(void)
 {
 	struct device_rec * temp = devices;
-	ttyputs( "\r\n" );
+	printf("\r\n");
 	while (temp != NULL) {
-		ttyputs( temp -> name );
-		ttyputs( temp -> longname );
-		ttyputs( temp -> file );
-		ttyputs( "\r\n" );
+		printf("%s%s%s\r\n",temp -> name, temp -> longname, temp -> file );
 		temp = temp -> next;
 	}
 }
@@ -154,178 +186,324 @@ static struct timer console_delay;
 
 extern void (* ttybreak) (); /* hook to tty for keyboard overrun */
 
-static char * help_message = "\
+//  D = list all devices
+//  M = mount file on device
+
+
+static char *help_message = "\
+g[addr]        - Run starting at current PC or at the given address.\r\n\
 \r\n\
-PDP-8/E emulator, commands are:\r\n\
-\n\
- nnnnnG = goto location N   nnnnn/ = open memory location N\r\n\
- nnnnnT = trace location N \r\n\
- C = continue from halt     A = open accumulator\r\n\
- L = open link              S = open switch register\r\n\
- <cr> = close unchanged     nnnn<cr> = store N in open location, then close\r\n\
- the value in a location is printed when that location is opened.\r\n\
-\n\
- R = reset/clear\r\n\
-\n\
- D = list all devices\r\n\
- M = mount file on device\r\n\
- to dismount file, mount nothing on the device\r\n\
-\n";
+t[cnt][,addr]  - Trace one (or 'cnt') instructions starting at current PC\r\n\
+                 or at the given address.\r\n\
+\r\n\
+s<value><reg>  - Set register PC/LINK/AC/MQ/SWITCH/IFLD/DFLD to value.\r\n\
+\r\n\
+d<addr>[,len]  - Dump 'len' (or 16 bytes if not specifed) of memory starting\r\n\
+                 at given address.\r\n\
+\r\n\
+D<addr>[,len]  - Disassemble 'len' (or 16 bytes if not given) of memory \r\n\
+                 starting at the given address.\r\n\
+\r\n\
+m<addr>,[data] - Modify memory content at address with data. Prompt if no data\r\n\
+                 is given. Enter dot (.) to exit mode or Enter to accept the\r\n\
+                 current value.\r\n\
+\r\n\
+b[value][type] - Set/Clear breakpoint at or for the specicied value for the\r\n\
+                 given type (E/W/R for execute, write or read at address,\r\n\
+                 or O for executing the given opcode). If no type is\r\n\
+                 given then the breakpoint is removed. If no value is given\r\n\
+                 all breakpoints are shown.\r\n\
+\r\n\
+r              - Clear(reset) registers and flags.\r\n\
+\r\n\
+l              - List devices.\r\n\
+\r\n\
+q              - Quit emulator and exit to operating system.\r\n\
+\r\n\
+#              - Comment, can also use ;\r\n\
+\r\n\
+";
 
-static void console_event(void)
-/* all console functions happen here! */
-{
-	int number = -1; /* number from command line */
-	int loc = 0; /* current memory location (negative => special loc) */
-	char ch; /* input character */
-
-	ttyoctal( ifr >> 12, 1, "" );
-	ttyoctal( pc, 4, " (" );
-	ttyoctal( ac, 4, "\r\n" );
-	do {
-		do { /* get next character but ignore break characters */
-			ch = ttygetc();
-		} while (ch == control('c'));
-		ttyputc( ch );
-		if ((ch >= '0')&&(ch <= '7')) {
-			if (number < 0) {
-				number = 0;
-			}
-			number = (number << 3) | (ch & 07);
-			if (number >= MAXMEM) {
-				number = -1;
-				ttyputs( "?\r\n" );
-			}
-		} else switch (ch) {
-		case '/': /* open number*/
-			if (number >= 0) {
-				loc = number;
-				number = -1;
-			}
-			ttyoctal( memory[loc], 4, " " );
-			break;
-		case 'S':
-		case 's': /* open switch register */
-			loc = -3;
-			number = -1;
-			ttyoctal( sr, 4, " " );
-			break;
-		case 'A':
-		case 'a': /* open accumulator */
-			loc = -2;
-			number = -1;
-			ttyoctal( ac, 4, " " );
-			break;
-		case 'L':
-		case 'l': /* open link */
-			loc = -1;
-			number = -1;
-			ttyoctal( (link >> 12), 1, " " );
-			break;
-		case '\r': /* set open location and close */
-		case '\n': /* synonym */
-			if (number >= 0) {
-				if (loc >= 0) {
-					memory[loc] = number & 07777;
-				} else if (loc == -3) {
-					sr = number & 07777;
-				} else if (loc == -2) {
-					ac = number & 07777;
-				} else if (loc == -1) {
-					link = (number & 01) << 12;
-				}
-				number = -1;
-			}
-			if (ch == '\r') {
-				ttyputc( '\n' );
-			} else {
-				ttyputc( '\r' );
-			}
-			break;
-		case 'G':
-		case 'g': /* Go */
-		case 'T':
-		case 't': /* Trace */
-			if (ch=='T' || ch=='t') {
-				trace=1;
-			} else {
-				trace=0;
-			}
-			clearflags();
-			if (number >= 0) {
-				pc = number & 07777;
-				ifr = number & 070000;
-			} else {
-				pc = 0;
-				ifr = 0;
-			}
-			ib = ifr;
-			dfr = ifr;
-			cpma = pc | ifr;
-			ttyputs( "\r\n" );
-			run = 1;
-			break;
-		case 'C':
-		case 'c': /* Continue */
-			ttyputs( "\r\n" );
-			run = 1;
-			break;
-		case 'R':
-		case 'r':
-			ttyputs( "\r\nFlags and registers cleared\r\n" );
-			clearflags();
-			break;
-		case 'Q':
-		case 'q': /* Quit */
-			ttyputs( "\r\nQuitting\r\n" );
-			powerdown();
-			/* the above never returns */
-			break;
-		case 'D':
-		case 'd': /* List Devices */
-			list_devices();
-			break;
-		case 'M':
-		case 'm': /* Mount file on device */
-			{
-				struct device_rec * d;
-				char n[5];
-				char f[80];
-				ttyputs( "\r\n device: " );
-				ttygets( n, 5 );
-				if ((d = get_device(n)) != NULL) {
-					int u = d -> unit;
-					ttyputs( " file: " );
-					ttygets( f, 80 );
-					if (f[0] != '\0') {
-						if (!(*(d -> mount))( u, f )) {
-							ttyputs( "?\r\n" );
-						}
-					} else {
-						(* (d -> dismount))( u );
-					}
-				} else {
-					ttyputs( "?\r\n" );
-				}
-			}
-			break;
-		case '?':
-			ttyputs( help_message );
-			number = -1;
-			break;
-		case 'H':
-		case 'h':
-			ttyputs( "\r\n" );
-			output_debug();
-			break;
-		default:
-			ttyputs( "?\r\n" );
-			number = -1;
-		}
-	} while ( run == 0 );
-
-	/* note that console mode is still raw on exit */
+static int isOctal(char ch) {
+	return (ch>='0' && ch<='7');
 }
+
+
+static char parse_nums(char *p, int *num1, int *num2) {
+	*num1=-1;
+	*num2=-1;
+	char ch=0;
+
+	while (!isOctal(*p)) {	// Skip leading non-octals
+		if (!(*p)) return ch;	// Return at end-of string
+		p++;
+	}
+
+	while(isOctal(*p)) {	// Collect num1 while octal numbers
+		if (*num1==-1) *num1=0;	// Zero num at first digit
+		*num1=(*num1)*8+(*p-'0');
+		p++;
+	}
+	if (!(*p)) return ch;		// Return at end-of string
+
+	while (!isOctal(*p)) {	// Skip middle non-octals
+		if (!(*p)) return ch;	// Return of end-of string
+		if (ch==0 && (*p)!=' ') ch=*p; // Store first non-space non-octal
+		p++;
+	}
+
+	while(isOctal(*p)) {	// Collect num2 while octal numbers
+		if (*num2==-1) *num2=0;	// Zero num at first digit
+		*num2=(*num2)*8+(*p-'0');
+		p++;
+	}
+	return ch;
+}
+
+char* toThousandsString(long long val) {
+    static char result[ 128 ];
+    snprintf(result, sizeof(result), "%lld", val);
+    int i = strlen(result) - 1;
+    int i2 = i + (i / 3);
+    int c = 0;
+    result[i2 + 1] = 0;
+    for( ; i != 0; i-- ) {
+        result[i2--] = result[i];
+        c++;
+        if( c % 3 == 0 )
+            result[i2--] = ' ';
+    }
+    return result;
+}
+
+void console(void) {
+	char ch;
+	char *p;
+	int i,cnt;
+	char cmd[100];
+	int num1, num2;
+
+	// Spend 1/10 of a second here making sure the tty buffer is processed
+	for (i=0; i<100; i++) {
+		fire_timer();
+		usleep(1000);
+	}
+
+	// printf("\r\n %s executed\r\n",toThousandsString(opcnt));
+
+	printf("\r\n%s\r\n",getAllRegs());
+	p=getAllWatched();
+	if (strlen(p)>0) printf("%s\r\n",p);
+
+	while (run <= RUNMODE_STOPPED) {
+		ttygets(cmd, 100);
+		ch=parse_nums(cmd, &num1, &num2);
+		switch (cmd[0]) {
+
+			case '?': // Help
+				fprintf(stdout,"%s", help_message);
+				break;
+
+			case '#': // comment
+			case '/': // comment
+				break;
+
+			case 'q': // Quit
+				printf( "\r\nQuitting\r\n" ); fflush(stdout); usleep(100000);
+				powerdown();
+				break;
+
+			case 'c': // Clear
+				printf( "\r\nFlags and registers cleared\r\n" );
+				ifr = 0;
+	 			ib = ifr;
+				dfr = ifr;
+				cpma = pc | ifr;
+				mq=0;
+				sr=0;
+				clearflags();
+				break;
+
+			case 's': // Set register value
+				if (num1==-1) break;
+				if (ch=='P' || ch=='p') pc=num1;
+				if (ch=='L' || ch=='l') lnk=010000*(num1&1);
+				if (ch=='A' || ch=='a') ac=num1;
+				if (ch=='M' || ch=='m') mq=num1;
+				if (ch=='S' || ch=='s') sw=num1;
+				if (ch=='I' || ch=='i') ifr=num1&7;
+				if (ch=='D' || ch=='d') dfr=num1&7;
+				printf("\r\n%s\r\n",getAllRegs());
+				break;
+
+			case 'm': // Set data in memory
+				if (num1==-1) break;
+				if (num2>=0) {
+					memory[num1]=num2;
+					break;
+				}
+				for (;;) {
+					printf("%04o: %04o  New:",num1,memory[num1]);
+					fflush(stdout);
+					ttygets(cmd, 100);
+					fflush(stdout);
+					if (cmd[0]==0) {
+						num1++;
+						continue;
+					}
+					if (!isOctal(cmd[0])) break;
+					ch=parse_nums(cmd, &num2, &num2);
+					memory[num1]=num2;
+					num1++;
+				}
+				break;
+
+			case 'g': // Go/Run
+				if (num1!=-1) pc=num1;
+				cpma=pc;
+				run=RUNMODE_STARTING;	
+				break;
+
+			case 'd': // Dump memory
+				if (num1==-1) break;
+				if (num2==-1) num2=16;
+				while (num2>0) {
+					printf("%04o: ",num1-(num1%8));
+					for (i=0; i<num1%8; i++) printf(".... ");
+					cnt=8-num1%8;
+					for (i=0; i<cnt; i++) {
+						printf("%04o ",memory[num1]);
+						num1++;
+						num2--;
+						if (num2==0) break;
+					}
+					printf("\r\n");
+				}
+				break;
+
+			case 'D': // Disassemble from memory
+				if (num1==-1) break;
+				if (num2==-1) num2=16;
+				while (num2>0) {
+					printf("%04o: %04o - %s\r\n",num1,memory[num1],ops[memory[num1]]);
+					num1++;
+					num2--;
+				}
+				break;
+
+			case 'b': // Breakpoints
+				if (num1==-1 && num2==-1) {
+					for (i=0; i<MAX_BREAKPOINTS; i++) {
+						if (bp_type[i]=='E') printf("BP at execution at %04o\r\n",bp[i]);
+						if (bp_type[i]=='R') printf("BP at read of %04o\r\n",bp[i]);
+						if (bp_type[i]=='W') printf("BP at write of %04o\r\n",bp[i]);
+						if (bp_type[i]=='O') printf("BP at opcode %04o\r\n",bp[i]);
+					}
+					break;
+				}
+				if (num1!=-1 && ch==0) {
+					for (i=0; i<MAX_BREAKPOINTS; i++) {
+						if (bp[i]==num1) {
+							if (bp_type[i]=='E') printf("Removed BP of execution type\r\n");
+							if (bp_type[i]=='R') printf("Removed BP of read of type\r\n");
+							if (bp_type[i]=='W') printf("Removed BP of write of type\r\n");
+							if (bp_type[i]=='O') printf("Removed BP of opcode type\r\n");
+							bp_type[i]=0;
+						}
+					}
+					break;
+				}
+				if (num1!=-1 && ch>0) {
+					for (i=0; i<MAX_BREAKPOINTS; i++) {
+						if (bp_type[i]==0) {
+							if (ch=='E'|ch=='e') {
+								bp_type[i]='E';
+								bp[i]=num1;
+								printf("Added BP for execution at address %04o\r\n",num1);
+								i=MAX_BREAKPOINTS;
+							}
+							if (ch=='R'|ch=='r') {
+								bp_type[i]='R';
+								bp[i]=num1;
+								printf("Added BP for read of address %04o\r\n",num1);
+								i=MAX_BREAKPOINTS;
+							}
+							if (ch=='W'|ch=='w') {
+								bp_type[i]='W';
+								bp[i]=num1;
+								printf("Added BP for write of address %04o\r\n",num1);
+								i=MAX_BREAKPOINTS;
+							}
+							if (ch=='O'|ch=='o') {
+								bp_type[i]='O';
+								bp[i]=num1;
+								printf("Added BP for opcode  %04o\r\n",num1);
+								i=MAX_BREAKPOINTS;
+							}
+						}
+					}
+					break;
+				}
+			case 'l': // List devices
+				list_devices();	
+				break;
+		}
+	}
+}
+
+
+// 		case 'G':
+// 		case 'g': /* Go */
+// 		case 'T':
+// 		case 't': /* Trace */
+// 			if (ch=='T' || ch=='t') {
+// 				trace=1;
+// 			} else {
+// 				trace=0;
+// 			}
+// 			clearflags();
+// 			if (number >= 0) {
+// 				pc = number & 07777;
+// 				ifr = number & 070000;
+// 			} else {
+// 				pc = 0;
+// 				ifr = 0;
+// 			}
+// 			ib = ifr;
+// 			dfr = ifr;
+// 			cpma = pc | ifr;
+// 			ttyputs( "\r\n" );
+// 			run = 1;
+// 			break;
+// 		case 'D':
+// 		case 'd': /* List Devices */
+// 			list_devices();
+// 			break;
+// 		case 'M':
+// 		case 'm': /* Mount file on device */
+// 			{
+// 				struct device_rec * d;
+// 				char n[5];
+// 				char f[80];
+// 				ttyputs( "\r\n device: " );
+// 				ttygets( n, 5 );
+// 				if ((d = get_device(n)) != NULL) {
+// 					int u = d -> unit;
+// 					ttyputs( " file: " );
+// 					ttygets( f, 80 );
+// 					if (f[0] != '\0') {
+// 						if (!(*(d -> mount))( u, f )) {
+// 							ttyputs( "?\r\n" );
+// 						}
+// 					} else {
+// 						(* (d -> dismount))( u );
+// 					}
+// 				} else {
+// 					ttyputs( "?\r\n" );
+// 				}
+// 			}
+// 			break;
+
 
 /**********************************************************/
 /* Interface between cpu implementation and control panel */
@@ -333,15 +511,15 @@ static void console_event(void)
 
 static void hitbreak(void) /* called by keyboard server to get attention */
 {
-	run = 0;
-	schedule( &console_delay, 0L, console_event, 0 );
+	run=RUNMODE_BREAK;
 }
 
 void kc8power(int argc, char **argv) /* power-on initialize */
 {
-	init_timer( console_delay );
+	init_timer(console_delay);
 	ttybreak = hitbreak;
-	ttyputs( "PDP-8 Emulator, type ? for help.\r\n" );
+	for (int i=0; i<MAX_WATCHES; i++) watch[i]=-1;
+	printf( "PDP-8 Emulator, type ? for help.\r\n" );
 }
 
 void kc8init(void) /* console reset */
@@ -351,7 +529,6 @@ void kc8init(void) /* console reset */
 
 void kc8halt(void) /* respond to halt instruction */
 {
-	/* force console event! */
-	schedule( &console_delay, 0L, console_event, 0 );
+	/* nothing to do here */
 }
 

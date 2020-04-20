@@ -1,268 +1,251 @@
 /* File: ttyaccess.c
-   Author: Douglas Jones, Dept. of Comp. Sci., U. of Iowa, Iowa City, IA 52242.
-   Modified by: Sander van Malssen, svm@kozmix.hacktic.nl.
-	added fixes so it uses termios.h rather than sgtty.h
-   Date: Aug. 15, 1995
-   Updates: Mats Engstrom, April 2020
+   Author: Mats Engstrom, April 2020
    Language: C (UNIX)
-   Purpose: Code to take over the tty and put it in raw mode
+   Purpose: Handle character-by-character input from stdin and udp using pthreads
 */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
+#include <pthread.h>
 #include <unistd.h>
-#include <termios.h>
-#include <signal.h>
+#include <sys/select.h>
+#include <stdlib.h>
+#include  <string.h>
+#include <sgtty.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <stdbool.h>
-#include <string.h>
+#include <sys/errno.h>
+#include "ttyaccess.h"
 
-#define ignore_value(x) (__extension__ ({ __typeof__ (x) __x = (x); (void) __x; }))
+struct threaddata_struct {
+    int termpipe;
+    int udp_socket;
+};
 
-#define control(ch) (ch & 037)
+static pthread_t thread;
+static int pipes[2];
+static struct threaddata_struct td;
 
-static int sock;
+#define RBLEN 1024
+static volatile int rbhead = 0; // head pointer for ring buffer queue 
+static volatile int rbtail = 0; // tail pointer for ring buffer queue 
+static volatile char rbqueue[RBLEN];
+static pthread_mutex_t rblock;      // Mutex for locking the ring buffer
 
-/*************/
-/* operation */
-/*************/
-
-/* This code takes over you keyboard input and display output files so
-   that the emulator will be able to do single keypress operations.
-
-   As written here, it uses the UNIX ioctl() service to put the keyboard
-   into raw-noecho mode (thus turning off all UNIX input processing,
-   including break character detection and more), and then it uses
-   fcntl() to allow polling of the input line.  It would be better
-   to use UNIX signals to grab the keyboard interrupt, but an attempt at
-   this caused too many headaches.
-
-   Unfortunately, UNIX doesn't guarantee an interrupt for every key,
-   so the interrupt service routine has to get one or more characters
-   each time it is called; UNIX then adds insult to injury by providing
-   lousy tools to handle the resulting critical sections.
-*/
+static char breakcnt;
 
 
-static int create_udp_socket(int port) 
-{
+
+
+//
+// Store character into ringbuffer
+//
+static void queue_to_rb(char ch)  {
+	int newtail = (rbtail + 1) % RBLEN;
+	if (newtail != rbhead) {
+		rbqueue[rbtail] = ch;
+		rbtail = newtail;
+	}
+	if (ch==3) breakcnt++;
+	else breakcnt=0;
+}
+
+
+//
+// Get a character from ringbuffer
+// returns -1 if empty, else the character
+//
+int get_from_rb(void)  {
+    int ch=-1;
+    pthread_mutex_lock(&rblock);
+	if (rbhead != rbtail) {
+        ch = rbqueue[rbhead];
+        rbhead = (rbhead + 1) % RBLEN;
+    }
+    pthread_mutex_unlock(&rblock);
+    return ch;
+}
+
+
+//
+// Return number of characters available in the ring buffer
+//
+int count_rb(void)  {
+    int cnt;
+    pthread_mutex_lock(&rblock);
+	cnt=abs(rbhead-rbtail);
+    pthread_mutex_unlock(&rblock);
+    return cnt;
+}
+
+
+//
+// Set stdin to either "raw" or normal mode
+// mode=true for raw, false=normal
+//
+static void set_stdin_raw(int mode) {
+	struct sgttyb sg;
+	ioctl(STDIN_FILENO, TIOCGETP, &sg);
+    if (mode) {
+        sg.sg_flags |= CBREAK;
+        sg.sg_flags &= ~ECHO;
+    } else {
+        sg.sg_flags &= ~CBREAK;
+        sg.sg_flags |= ECHO;
+    }
+	ioctl(STDIN_FILENO, TIOCSETN, &sg);
+}
+
+
+//
+// Create and bind to a listening UDP socket
+//
+static int create_udp_socket(int port) {
 	struct sockaddr_in server_address;
+    int sock;
+    int r;
 	memset(&server_address, 0, sizeof(server_address));
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-		printf("could not create socket\n");
-		return 1;
+    sock = socket(PF_INET, SOCK_DGRAM, 0);
+    for (int i=0; i<5; i++) {
+        r=bind(sock, (struct sockaddr *)&server_address, sizeof(server_address));
+        if (r==0) break;
+        sleep(1);
+    }
+    if (r < 0) {
+		printf("Could not bind socket to UDP port %d\n",port);
+		exit(1);
 	}
+	return sock;
+}
 
-	struct timeval read_timeout;
-	read_timeout.tv_sec = 0;
-	read_timeout.tv_usec = 1;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+//
+// Thread that waits for keypresses or udp messages and puts them into the ring buffer
+//
+void *keyin_thread(void *td) {
+    char buffer[256];
+    int len;
+    fd_set rfds;
 
-	if ((bind(sock, (struct sockaddr *)&server_address,
-	          sizeof(server_address))) < 0) {
-		printf("could not bind socket\n");
-		return 1;
-	}
-	return 0;
+    int termpipe = ((struct threaddata_struct *)td)->termpipe;
+    int udp_socket = ((struct threaddata_struct *)td)->udp_socket;
+
+    for (;;) {
+        FD_ZERO(&rfds);
+        FD_SET(STDIN_FILENO, &rfds);
+        FD_SET(termpipe, &rfds);
+        FD_SET(udp_socket, &rfds);
+
+        while (select(udp_socket+1, &rfds, NULL, NULL, NULL) == 0);
+
+        if (FD_ISSET(termpipe, &rfds)) {
+            close(termpipe);
+            break;
+        }
+
+        if (FD_ISSET(STDIN_FILENO, &rfds)) {
+            len=read(STDIN_FILENO, buffer, sizeof(buffer));
+            pthread_mutex_lock(&rblock);
+            for (int i=0; i<len; i++) queue_to_rb(buffer[i]);
+            pthread_mutex_unlock(&rblock);
+        }
+
+        if (FD_ISSET(udp_socket, &rfds)) {
+            len=recv(udp_socket, buffer, sizeof(buffer),0);
+            pthread_mutex_lock(&rblock);
+            for (int i=0; i<len; i++) queue_to_rb(buffer[i]);
+            pthread_mutex_unlock(&rblock);
+        }
+    }
+    pthread_exit(NULL);
 }
 
 
-/************************/
-/* startup and shutdown */
-/************************/
-
-static struct termios oldstate; /* tty state prior to reset */
-
-void ttyrestore(void);  /* forward declaration */
-
-static void mykill(int arg)  /* called to kill process */
-{
-	ttyrestore();
-	exit(-1);
-}
-
-void ttyraw(void) /* save tty state and convert to raw mode */
-{
-	/* take over the interactive terminal */
-	/* get old TTY mode for restoration on exit */
-	tcgetattr(STDIN_FILENO, &oldstate);
-	
-	/* put TTY in RAW mode; note: raw mode may be a bit drastic! */
-	struct termios newstate;
-	tcgetattr(STDIN_FILENO, &newstate);
-	newstate.c_lflag &= ~ISIG;  /* don't enable signals */
-	newstate.c_lflag &= ~ICANON;/* don't do canonical input */
-	newstate.c_lflag &= ~ECHO;  /* don't echo */
-	newstate.c_iflag &= ~INLCR; /* don't convert nl to cr */
-	newstate.c_iflag &= ~IGNCR; /* don't ignore cr */
-	newstate.c_iflag &= ~ICRNL; /* don't convert cr to nl */
-	newstate.c_iflag &= ~IXON;  /* don't enable ^S/^Q on output */
-	newstate.c_iflag &= ~IXOFF; /* don't enable ^S/^Q on input */
-	newstate.c_oflag &= ~OPOST; /* don't enable output processing */
-	newstate.c_cc[VMIN] = 0 ;
-	newstate.c_cc[VTIME] = 1 ;
-	tcsetattr(STDIN_FILENO, TCSANOW, &newstate);
-
-	/* install handlers to catch attempts to kill process */
-	signal( SIGTERM, mykill );
-
-	/* Set keyboard to nonblocking */
-	int flag;
-	flag = fcntl( STDIN_FILENO, F_GETFL, 0 );
-	fcntl( STDIN_FILENO, F_SETFL, flag | O_NDELAY );
-
-	/* Create the UDP socket listening at port 2288 */
-	create_udp_socket(2288);
-}
-
-void ttyrestore(void) /* return console to user */
-{
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldstate);
-	close(sock);
+//
+// Traps ctrl-c and send it to the ring buffer for normal processing
+//
+static void mykill(int arg) {
+	queue_to_rb(3);
 }
 
 
-/*********************/
-/* user I/O routines */
-/*********************/
-
-void (* ttybreak) () = NULL; /* set by user, called when 5 consec ^C seen */
-
-void ttyputc(char ch) /* put character to console */
-{
-	char buf = ch;
-	ignore_value(write( STDOUT_FILENO, &buf, 1 ));
+//
+//
+//
+void comms_init(void) {
+    pthread_mutex_init(&rblock, NULL);
+    pipe(pipes);
+    td.termpipe=pipes[0];
+    td.udp_socket=create_udp_socket(2288);
+    set_stdin_raw(1);
+	breakcnt=0;
+	signal(SIGINT, mykill);
+    pthread_create(&thread, NULL, keyin_thread, &td);
 }
 
 
-static int breakcount = 0; /* count of consecutive ^C chars while polling */
-
-/* following definitions are for auxiliary path into TTY input stream */
-#define stufflen 1024
-static int stuffhead = 0; /* head pointer for stuffing queue */
-static int stufftail = 0; /* tail pointer for stuffing queue */
-static char stuffqueue[stufflen];
-
-void ttystuff(char ch) /* stuff a char into input stream from auxiliary source */
-{
-	int newtail = (stufftail + 1) % stufflen;
-	if (newtail != stuffhead) { /* discards excess input */
-		stuffqueue[stufftail] = ch;
-		stufftail = newtail;
-	}
-}
-
-static void poll_udp()  /* poll for characters coming in at the UDP socket */
-{
-	struct sockaddr_in client_address;
-	socklen_t client_address_len = 0;
-	int len;
-	int i;
-
-	char buffer[256];
-	len = recvfrom(sock, buffer, sizeof(buffer), 0,
-				(struct sockaddr *)&client_address,
-				&client_address_len);
-
-	for (i=0; i<len; i++) {
-		ttystuff(buffer[i]);
-	}
+//
+//
+//
+void comms_cleanup(void) {
+    set_stdin_raw(0);
+    close(pipes[1]);
+    printf("Closing socket %d\r\n",td.udp_socket);
+    close(td.udp_socket);
+    pthread_mutex_destroy(&rblock);
+    // pthread_exit(NULL);
 }
 
 
-int ttypoll(void) /* poll for a character from the console */
-{
-	int count;
-	char buf;
-	
-	poll_udp();
-
-	/* try to fill input buffer with one char */
-	if (stuffhead != stufftail) {
-		count = 1;
-		buf = stuffqueue[stuffhead];
-		stuffhead = (stuffhead + 1) % stufflen;
-	} else {
-		count = read(STDIN_FILENO, &buf, 1 );
-	}
-
-	if (count <= 0) {
-		return -1;
-	} else {
-		if (buf == control('c')) { /* detect 5 control C in a row */
-			breakcount++;
-			if ((breakcount >= 5) && (ttybreak != NULL)) {
-				ttybreak();
-				breakcount = 0;
-			}
-		} else {
-			/* This should be dealt with in ttyraw(),
-			   but many UNIX TTY interfaces refuse to do it!
-			if (buf == '\n')
-				buf = '\r'; */
-			breakcount = 0;
-		}
-		return buf;
-	}
+//
+//  blocking 7 bit read from console 
+//
+int ttygetc(void) {
+	int ch;
+	do {
+		ch=get_from_rb();
+        if (ch<0) {
+        	if (breakcnt>4) ttybreak();
+            usleep(100);
+        }
+    } while (ch<0);
+	return ch;
 }
 
-int ttygetc(void) /* blocking 7 bit read from console */
-{
-	char buf;
-	int len;
-
-	for (;;) {
-		poll_udp();
-
-		if (stuffhead != stufftail) {
-			buf = stuffqueue[stuffhead];
-			stuffhead = (stuffhead + 1) % stufflen;
-			break;
-		} else {
-			len=read(STDIN_FILENO, &buf, 1 );
-			if (len>0) break;
-		}
-	}
-
-	breakcount = 0;
-	return buf & 0177;
+//
+// poll for a character from the console
+//
+int ttypoll(void) {
+    if (breakcnt>4) ttybreak();
+	return get_from_rb();
 }
 
-void ttyputs(char * buf) /* put string to console */
-{
-	int count;
-	for (count = 0; buf[count] != '\0'; count++) {;};
-	count = write(STDOUT_FILENO, buf, count );
-	fsync( STDOUT_FILENO );
-}
 
-void ttygets(char * buf, int len) /* get string from console */
-{
+//
+//
+//
+void ttygets(char * buf, int len) {
 	int i = 0;
 	int ch;
+	char c;
 	do {
 		ch = ttygetc();
 		if (ch == '\b' || ch==127) {
 			if (i > 0) {
-				ttyputs( "\b \b" );
+				write(STDOUT_FILENO, "\b \b", 3);
 				i--;
 			}
 		} else if (ch >= ' ') {
 			if (i < (len - 1)) {
-				ttyputc(ch);
+				c=ch;
+				write(STDOUT_FILENO, &c, 1);
 				buf[i] = ch;
 				i++;
 			}
 		}
 	} while ((ch != '\r') && (ch != '\n'));
-	ttyputs( "\r\n" );
+	write(STDOUT_FILENO, "\r\n", 2);
 	if (i < len) {
 		buf[i] = '\0';
 	} else {
