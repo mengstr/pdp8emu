@@ -1,7 +1,7 @@
 
-all: clean pdp8emu 
+all: pdp8emu 
 
-.PHONY: docker tools clean distclean
+.PHONY: docker tools cores clean distclean
 
 #
 # KK8E with debug support -- the above hardware with an added trace package
@@ -79,108 +79,108 @@ docker:
 
 
 # Run some MAINDEC diags to see if it works correctly
-check: pdp8emu
-	./tools/pt8exam -w tests/D0AB-InstTest-1.pt
+check: pdp8emu cores
 	./pdp8emu tests/D0AB-InstTest-1.pt.core 2>D0AB.2.tmp | tee D0AB.1.tmp &
 		@sleep 1
-		@printf "m0120,0261\n" 	| nc -w 1 -u 127.0.0.1 2288
-		@printf "s7777s\n" 		| nc -w 1 -u 127.0.0.1 2288
-		@printf "g200\n" 		| nc -w 1 -u 127.0.0.1 2288
-		@printf "g\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "m0120,0261\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s7777s\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao '1' D0AB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0BB-InstTest-2.pt
 	./pdp8emu tests/D0BB-InstTest-2.pt.core 2>D0BB.2.tmp | tee D0BB.1.tmp & 
 		@sleep 1
-		@printf "m3751,0262\n" 	| nc -w 1 -u 127.0.0.1 2288
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "m3751,0262\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao '2' D0BB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0CC-AddTest.pt
 	./pdp8emu tests/D0CC-AddTest.pt.core 2>D0CC.2.tmp | tee D0CC.1.tmp &
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 320
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'RANDOM' D0CC.1.tmp | wc -l)" -lt "1" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0DB-RandomAND.pt
 	./pdp8emu tests/D0DB-RandomAND.pt.core 2>D0DB.2.tmp | tee D0DB.1.tmp &
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'A' D0DB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0EB-Random-TAD.pt
 	./pdp8emu tests/D0EB-Random-TAD.pt.core 2>D0EB.2.tmp | tee D0EB.1.tmp &
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'T' D0EB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0FC-Random-ISZ.pt
 	./pdp8emu tests/D0FC-Random-ISZ.pt.core 2>D0FC.2.tmp | tee D0FC.1.tmp&
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'FC' D0FC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0GC-Random-DCA.pt
 	./pdp8emu tests/D0GC-Random-DCA.pt.core 2>D0GC.2.tmp | tee D0GC.1.tmp &
 		@sleep 1
-		@printf "m0013,0307\n" 	| nc -w 1 -u 127.0.0.1 2288
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "m0013,0307\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 320
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'G' D0GC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0HC-Random-JMP.pt
 	./pdp8emu tests/D0HC-Random-JMP.pt.core 2>D0HC.2.tmp | tee D0HC.1.tmp&
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'HC' D0HC.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0IB-JMPJMS.pt
 	./pdp8emu tests/D0IB-JMPJMS.pt.core 2>D0IB.2.tmp | tee D0IB.1.tmp &
 		@sleep 1
-		@printf "m3567,0311\n" 	| nc -w 1 -u 127.0.0.1 2288
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "m3567,0311\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'I' D0IB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/D0JB-JMPJMS-RANDOM.pt
 	./pdp8emu tests/D0JB-JMPJMS-RANDOM.pt.core 2>D0JB.2.tmp | tee D0JB.1.tmp &
 		@sleep 1
-		@printf "g0200\n" 		| nc -w 1 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@sleep 20
-		@printf "\03\03\03\03\03" | nc -w 1 -u 127.0.0.1 2288
-		@printf "q\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
+		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao 'JB' D0JB.1.tmp | wc -l)" -lt "5" ]; then false; fi
 
-	./tools/pt8exam -w tests/CHEKMO.BN
 	./pdp8emu tests/CHEKMO.BN.core 2>CHEKMO.2.tmp | tee CHEKMO.1.tmp &
 		@sleep 1
 		@printf "c\n" 				| nc -w 1 -u 127.0.0.1 2288
-		@printf "g200\n" 			| nc -w 3 -u 127.0.0.1 2288
+		@printf "s200pc\n" 			| nc -w 1 -u 127.0.0.1 2288
+		@printf "g\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@printf "MV\r" 				| nc -w 3 -u 127.0.0.1 2288
 		@printf "MV\r" 				| nc -w 3 -u 127.0.0.1 2288
 		@printf "MV\r" 				| nc -w 3 -u 127.0.0.1 2288
@@ -190,6 +190,20 @@ check: pdp8emu
 		@printf "\03\03\03\03\03" 	| nc -w 1 -u 127.0.0.1 2288
 		@printf "q\n" 				| nc -w 1 -u 127.0.0.1 2288
 		@if [ "$$(grep -ao '\-\-' CHEKMO.1.tmp | wc -l)" -lt "5" ]; then false; fi
+
+
+cores: tools
+	./tools/pt8exam -w tests/D0AB-InstTest-1.pt
+	./tools/pt8exam -w tests/D0BB-InstTest-2.pt
+	./tools/pt8exam -w tests/D0CC-AddTest.pt
+	./tools/pt8exam -w tests/D0DB-RandomAND.pt
+	./tools/pt8exam -w tests/D0EB-Random-TAD.pt
+	./tools/pt8exam -w tests/D0FC-Random-ISZ.pt
+	./tools/pt8exam -w tests/D0GC-Random-DCA.pt
+	./tools/pt8exam -w tests/D0HC-Random-JMP.pt
+	./tools/pt8exam -w tests/D0IB-JMPJMS.pt
+	./tools/pt8exam -w tests/D0JB-JMPJMS-RANDOM.pt
+	./tools/pt8exam -w tests/CHEKMO.BN
 
 #
 tools:

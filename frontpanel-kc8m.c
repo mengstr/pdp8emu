@@ -40,8 +40,8 @@
 //
 char *getAllRegs() {
 	static char buf[100];
-	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o AI=%04o %04o %04o %04o %04o %04o %04o %04o ws:%04o",
-		ifr,pc,dfr,lnk?1:0,ac,mq,memory[010],memory[011],memory[012],memory[013],memory[014],memory[015],memory[016],memory[017],sr
+	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o AI=%04o %04o %04o %04o %04o %04o %04o %04o",
+		ifr,pc,dfr,lnk?1:0,ac,mq,memory[010],memory[011],memory[012],memory[013],memory[014],memory[015],memory[016],memory[017]
 	);
 	return buf;
 }
@@ -194,20 +194,19 @@ extern void (* ttybreak) (); /* hook to tty for keyboard overrun */
 
 
 static char *help_message = "\
-g[addr]        - Run starting at current PC or at the given address.\r\n\
+g             - Run starting at current PC\r\n\
+g<cnt>        - Run <cnt> instructions starting at current PC.\r\n\
 \r\n\
-t[cnt][,addr]  - Trace one (or 'cnt') instructions starting at current PC\r\n\
-                 or at the given address.\r\n\
+t  	           - Trace/Step one instruction at current PC\r\n\
+t<cnt>         - Trace <cnt> instructions starting at current PC\r\n\
 \r\n\
-s<value><reg>  - Set register PC/LINK/AC/MQ/SWITCH/IFLD/DFLD to value.\r\n\
+s<value><reg>  - Set <register> PC/LINK/AC/MQ/SWITCH/IFLD/DFLD to <value>\r\n\
 \r\n\
-d<addr>[,len]  - Dump 'len' (or 16 bytes if not specifed) of memory starting\r\n\
-                 at given address.\r\n\
+d<addr>[,len]  - Dump [len] (default 16) bytes of memory starting at <addr>\r\n\
 \r\n\
-D<addr>[,len]  - Disassemble 'len' (or 16 bytes if not given) of memory \r\n\
-                 starting at the given address.\r\n\
+D<addr>[,len]  - Disassemble [len] (default 16) bytes starting at <addr>\r\n\
 \r\n\
-m<addr>,[data] - Modify memory content at address with data. Prompt if no data\r\n\
+m<addr>,[data] - Modify memory content at <addr> with [data]. Prompt if no data\r\n\
                  is given. Enter dot (.) to exit mode or Enter to accept the\r\n\
                  current value.\r\n\
 \r\n\
@@ -300,6 +299,8 @@ void console(void) {
 	if (strlen(p)>0) printf("%s\r\n",p);
 
 	while (run <= RUNMODE_STOPPED) {
+		printf(":"); 
+		fflush(stdout);
 		ttygets(cmd, 100);
 		ch=parse_nums(cmd, &num1, &num2);
 		switch (cmd[0]) {
@@ -313,7 +314,9 @@ void console(void) {
 				break;
 
 			case 'q': // Quit
-				printf( "\r\nQuitting\r\n" ); fflush(stdout); usleep(100000);
+				printf( "\r\nQuitting\r\n" ); 
+				fflush(stdout); 
+				usleep(100000);
 				powerdown();
 				break;
 
@@ -365,15 +368,13 @@ void console(void) {
 
 			case 'g': // Go/Run
 				trace=0;
-				if (num1!=-1) pc=num1;
-				cpma=pc;
 				run=RUNMODE_STARTING;	
 				break;
 
-			case 't': // TODO Trace
+			case 't': // Trace
 				trace=1;	
-				if (num1!=-1) pc=num1;
-				cpma=pc;
+				bpInstCnt=num1;
+				if (bpInstCnt<1) bpInstCnt=1;
 				run=RUNMODE_STARTING;	
 				break;
 

@@ -38,6 +38,7 @@ char corename[NAME_LENGTH]; /* name of core image file, if any */
 char * progname; /* name of program itself (argv[0]) */
 int trace; /* true if disassembly/trace is output while running */
 unsigned short memory[MAXMEM];
+int bpInstCnt;
 int bp[MAX_BREAKPOINTS];
 int bp_type[MAX_BREAKPOINTS];   // 0=disabled, 1=address, 2=opcode
 int watch[MAX_WATCHES];
@@ -325,6 +326,9 @@ int main(int argc, char **argv)
 
 		/* the actual instruction fetch is here */
 		mb = memory[cpma];
+
+		if (bpInstCnt==0) {run=RUNMODE_CNT; continue;}
+		if (bpInstCnt>0) bpInstCnt--;
 		if (run==RUNMODE_RUNNING) {	
 			if (bp_type[0]=='O' && mb==bp[0]) {run=RUNMODE_BP_O; continue;}
 			if (bp_type[1]=='O' && mb==bp[1]) {run=RUNMODE_BP_O; continue;}
