@@ -32,6 +32,7 @@
 /*****************************************************/
 /* Globals that really aren't really part of the bus */
 /*****************************************************/
+void set_file_name(char *f,char *s);
 
 extern char corename[NAME_LENGTH]; /* name of core image file, if any */
 extern char * progname; /* name of program itself (argv[0]) */
@@ -53,7 +54,7 @@ extern long long opcnt;
 
 #define MAXMEM 32768
 
-extern int memory[MAXMEM];
+extern unsigned short memory[MAXMEM];
 
 #define RUNMODE_BP_O       -7    // Stop caused by Opcode BP
 #define RUNMODE_BP_R       -6    // Stop caused by Read BP

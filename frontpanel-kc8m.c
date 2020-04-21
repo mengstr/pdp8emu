@@ -40,8 +40,8 @@
 //
 char *getAllRegs() {
 	static char buf[100];
-	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o AI=%04o %04o %04o %04o %04o %04o %04o %04o",
-		ifr,pc,dfr,lnk?1:0,ac,mq,memory[010],memory[011],memory[012],memory[013],memory[014],memory[015],memory[016],memory[017]
+	sprintf(buf,"PC=%d:%04o DF=%d L=%d AC=%04o MQ=%04o AI=%04o %04o %04o %04o %04o %04o %04o %04o ws:%04o",
+		ifr,pc,dfr,lnk?1:0,ac,mq,memory[010],memory[011],memory[012],memory[013],memory[014],memory[015],memory[016],memory[017],sr
 	);
 	return buf;
 }
@@ -334,10 +334,11 @@ void console(void) {
 				if (ch=='L' || ch=='l') lnk=010000*(num1&1);
 				if (ch=='A' || ch=='a') ac=num1;
 				if (ch=='M' || ch=='m') mq=num1;
-				if (ch=='S' || ch=='s') sw=num1;
+				if (ch=='S' || ch=='s') sr=num1;
 				if (ch=='I' || ch=='i') ifr=num1&7;
 				if (ch=='D' || ch=='d') dfr=num1&7;
 				printf("\r\n%s\r\n",getAllRegs());
+				if (ch=='S' || ch=='s') printf("Switches set to %04o\r\n",sr);
 				break;
 
 			case 'm': // Set data in memory
@@ -363,6 +364,14 @@ void console(void) {
 				break;
 
 			case 'g': // Go/Run
+				trace=0;
+				if (num1!=-1) pc=num1;
+				cpma=pc;
+				run=RUNMODE_STARTING;	
+				break;
+
+			case 't': // TODO Trace
+				trace=1;	
 				if (num1!=-1) pc=num1;
 				cpma=pc;
 				run=RUNMODE_STARTING;	

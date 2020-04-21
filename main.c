@@ -13,8 +13,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <ctype.h>
+
 #include "bus.h"
-#include "utility.h"
 #include "realtime.h"
 #include "ttyaccess.h"
 #include "debug.h"
@@ -30,7 +37,7 @@
 char corename[NAME_LENGTH]; /* name of core image file, if any */
 char * progname; /* name of program itself (argv[0]) */
 int trace; /* true if disassembly/trace is output while running */
-int memory[MAXMEM];
+unsigned short memory[MAXMEM];
 int bp[MAX_BREAKPOINTS];
 int bp_type[MAX_BREAKPOINTS];   // 0=disabled, 1=address, 2=opcode
 int watch[MAX_WATCHES];
@@ -118,6 +125,26 @@ void clearflags(void)
 	enab_del = 0;
 }
 
+
+/* The following routine is used to make a copy of a string into a buffer *
+ * that will be used as a file name.  This routine checks to make sure    *
+ * that the file name fits in the buffer, and it prevents file names with *
+ * embedded blanks by stopping the copy at the first blank.  It is safe   *
+ * to call this with the same parameter for both arguments.               */
+
+void set_file_name(
+	char * f, /* buffer for file name */
+	char * s /* string from which name comes */
+)
+{
+        int i = 0; /* index into f */
+        int j = 0; /* index into s */
+        while ((i < (NAME_LENGTH - 1)) && (isgraph(s[j]))) {
+                f[i++] = s[j++];
+        }
+        f[i] = '\0';
+}
+
 static void closecore(int u)
 {
 	corename[0] = '\0';
@@ -129,32 +156,21 @@ static int opencore(int u, char * f)
 	return(1);
 }
 
+
 void powerup(int argc, char** argv)
 /* called only once for power on */
 {
-	/* first, see if there is a specified core image save file,
-	   since PDP-8/E machines usually have core memory and tend
-	   to remember what was in them as of the previous shutdown
-
-	   A parameter of the form <filename> with no leading dash
-	   is interpreted as the name of the core file.  If there is
-	   no core file specified, core comes up uninitialized.
-	*/
+	// TODO Handle arguments
 
 	run = RUNMODE_STOPPED; /* by default, the machine comes up halted */
-
-	getargs( argc, argv );
 
 	/* initialize the real-time simulation mechanisms */
 	init_timers();
 
 	/* initialize all devices to their power-on state */
-
-	/* core must be registered first because it's going to be
-	   on the console device window at console-power up */
-    register_device( opencore, closecore, 0, "CORE", "- saved image of main memory   ", corename );
+	register_device( opencore, closecore, 0, "CORE", "- saved image of main memory   ", corename );
 	kc8power( argc, argv ); /* console */
-// KE8E	ke8epower(); /* eae */
+	// KE8E	ke8epower(); /* eae */
 	km8epower(); /* mmu */
 	dk8epower(); /* real-time clock */
 	kl8epower(); /* console TTY */
@@ -162,21 +178,20 @@ void powerup(int argc, char** argv)
 	cr8fpower(); /* card reader */
 	rx8epower(); /* diskette drive */
 
-	/* now, with all devices set up, mount devices, as needed */
-	if (corename[0] != '\0') { /* there is a core file */
-		readcore();
-		/* if the machine was running when last stopped, this may
-		   set the run flipflop */
+	int fd=open(argv[1],O_RDONLY);
+	if (fd<0) {
+ 		printf("Failed to open %s : %s\n",argv[1],strerror(errno));
+		 exit(1);
 	}
+	read(fd,memory,sizeof(memory));
+	close(fd);
 
 	clearflags();
-
 }
 
 void powerdown(void)
 /* called only once from the console to exit the emulator */
 {
-	if (corename[0] != '\0') dumpcore();
 	comms_cleanup();
 	close_devices();
 	exit(0);

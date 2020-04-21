@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include "realtime.h"
 #include "bus.h"
-#include "utility.h"
 #include "frontpanel-kc8m.h"
 
 
