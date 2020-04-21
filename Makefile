@@ -195,10 +195,10 @@ check: pdp8emu
 tools:
 	mkdir -p tools
 	#
-	git clone git@github.com:SmallRoomLabs/pt8exam.git tools/pt8exam-src
+	git clone --depth=1 https://github.com/SmallRoomLabs/pt8exam.git tools/pt8exam-src
 	cd tools/pt8exam-src; make; cp pt8exam ..; cd ..; rm -rf pt8exam-src
 	#
-	git clone git@github.com:SmallRoomLabs/palbart.git tools/palbart-src
+	git clone --depth=1 https://github.com/SmallRoomLabs/palbart.git tools/palbart-src
 	cd tools/palbart-src; make; cp palbart ..; cd ..; rm -rf palbart-src
 	
 
