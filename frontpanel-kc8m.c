@@ -368,6 +368,7 @@ void console(void) {
 
 			case 'g': // Go/Run
 				trace=0;
+				bpInstCnt=num1;
 				run=RUNMODE_STARTING;	
 				break;
 
